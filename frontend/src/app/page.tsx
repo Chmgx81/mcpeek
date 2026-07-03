@@ -227,16 +227,16 @@ function HeroMockup() {
 
 /* ─── Stats bar ─── */
 function StatsBar() {
-  const s1 = useCountUp(10000, 2200);
-  const s2 = useCountUp(2400, 2000);
-  const s3 = useCountUp(500, 1800);
-  const s4 = useCountUp(99, 1600);
+  const s1 = useCountUp(15, 1200);
+  const s2 = useCountUp(5, 1200);
+  const s3 = useCountUp(3, 1200);
+  const s4 = useCountUp(4, 1200);
 
   const stats = [
-    { ref: s1.ref, value: s1.count, suffix: "+", label: "Scans run", color: "#22c55e" },
-    { ref: s2.ref, value: s2.count, suffix: "+", label: "Threats detected", color: "#eab308" },
-    { ref: s3.ref, value: s3.count, suffix: "+", label: "Servers tested", color: "#3b82f6" },
-    { ref: s4.ref, value: s4.count, suffix: "%", label: "Uptime", color: "#a855f7" },
+    { ref: s1.ref, value: s1.count, suffix: "+", label: "Threat categories", color: "#22c55e" },
+    { ref: s2.ref, value: s2.count, suffix: "", label: "Demo fixtures", color: "#eab308" },
+    { ref: s3.ref, value: s3.count, suffix: "", label: "Export formats", color: "#3b82f6" },
+    { ref: s4.ref, value: s4.count, suffix: "", label: "Scan stages", color: "#a855f7" },
   ];
 
   return (
@@ -353,26 +353,29 @@ function HowItWorks() {
   );
 }
 
-/* ─── Testimonials ─── */
-function Testimonials() {
-  const quotes = [
+/* ─── Demo Evidence ─── */
+function DemoEvidence() {
+  const samples = [
     {
-      name: "Sarah Chen",
-      role: "Security Engineer, Acme Corp",
-      quote: "We found 3 critical supply chain vulnerabilities in our MCP servers that every other tool missed. MCPeek paid for itself in the first scan.",
-      avatar: "SC",
+      name: "Safe MCP control",
+      file: "examples/safe-mcp.json",
+      result: "SAFE",
+      detail: "0 findings, score 100",
+      color: "#22c55e",
     },
     {
-      name: "Marcus Rivera",
-      role: "DevOps Lead, Agentify",
-      quote: "The runtime-aware scanning caught a malicious install script that only triggered on npm install. Static analysis would have never found it.",
-      avatar: "MR",
+      name: "Curl-to-shell MCP",
+      file: "examples/vulnerable-mcp-curl-shell.json",
+      result: "CRITICAL",
+      detail: "14 findings, CI exits 2",
+      color: "#ef4444",
     },
     {
-      name: "Aisha Patel",
-      role: "CTO, Toolchain Labs",
-      quote: "Finally, a security tool that understands the AI agent ecosystem. The trust scoring alone saves us hours of manual review.",
-      avatar: "AP",
+      name: "Malicious agent skill",
+      file: "examples/vulnerable-agent-skill.md",
+      result: "CRITICAL",
+      detail: "15 findings, CI exits 2",
+      color: "#ef4444",
     },
   ];
 
@@ -380,27 +383,28 @@ function Testimonials() {
     <section className="px-5 py-20">
       <div className="mx-auto max-w-[1100px]">
         <div className="mb-12 text-center">
-          <p className="text-[11px] font-medium uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Testimonials</p>
+          <p className="text-[11px] font-medium uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Demo Evidence</p>
           <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#fafafa", letterSpacing: "-0.03em" }}>
-            Trusted by security teams
+            Verified against included fixtures
           </h2>
+          <p className="text-[13px] mt-2 max-w-xl mx-auto" style={{ color: "#737373", lineHeight: 1.6 }}>
+            MCPeek ships with safe and intentionally vulnerable samples so judges can reproduce the results locally.
+          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {quotes.map((q) => (
+          {samples.map((sample) => (
             <div
-              key={q.name}
+              key={sample.file}
               className="p-5 flex flex-col justify-between"
               style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}
             >
-              <p className="text-[13px] mb-4" style={{ color: "#a3a3a3", lineHeight: 1.6 }}>&ldquo;{q.quote}&rdquo;</p>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
-                  {q.avatar}
-                </div>
-                <div>
-                  <div className="text-[12px] font-semibold" style={{ color: "#e5e5e5" }}>{q.name}</div>
-                  <div className="text-[11px]" style={{ color: "#525252" }}>{q.role}</div>
-                </div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: sample.color }}>{sample.result}</div>
+                <h3 className="text-[15px] font-semibold mb-1" style={{ color: "#e5e5e5" }}>{sample.name}</h3>
+                <p className="text-[12px] font-mono break-all" style={{ color: "#737373" }}>{sample.file}</p>
+              </div>
+              <div className="mt-5 text-[12px]" style={{ color: "#a3a3a3" }}>
+                {sample.detail}
               </div>
             </div>
           ))}
@@ -586,33 +590,45 @@ function Footer() {
           <div>
             <p className="text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Resources</p>
             <div className="space-y-2">
-              {["Documentation", "GitHub", "Changelog"].map((l) => (
-                <a key={l} href="#" className="block text-[12px] transition-colors" style={{ color: "#525252" }}
+              {[
+                { label: "Documentation", href: "/blog/introducing-mcpeek" },
+                { label: "Demo Guide", href: "/blog/introducing-mcpeek" },
+                { label: "GitHub Action", href: "/dashboard" },
+              ].map((l) => (
+                <a key={l.label} href={l.href} className="block text-[12px] transition-colors" style={{ color: "#525252" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#e5e5e5")}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#525252")}
-                >{l}</a>
+                >{l.label}</a>
               ))}
             </div>
           </div>
           <div>
             <p className="text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Community</p>
             <div className="space-y-2">
-              {["Discord", "Twitter", "Contributing"].map((l) => (
-                <a key={l} href="#" className="block text-[12px] transition-colors" style={{ color: "#525252" }}
+              {[
+                { label: "Hackathon Demo", href: "/blog/introducing-mcpeek" },
+                { label: "Examples", href: "/dashboard" },
+                { label: "Contributing", href: "/contact" },
+              ].map((l) => (
+                <a key={l.label} href={l.href} className="block text-[12px] transition-colors" style={{ color: "#525252" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#e5e5e5")}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#525252")}
-                >{l}</a>
+                >{l.label}</a>
               ))}
             </div>
           </div>
           <div>
             <p className="text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Legal</p>
             <div className="space-y-2">
-              {["Privacy", "Terms", "License"].map((l) => (
-                <a key={l} href="#" className="block text-[12px] transition-colors" style={{ color: "#525252" }}
+              {[
+                { label: "Privacy", href: "/contact" },
+                { label: "Terms", href: "/contact" },
+                { label: "License", href: "/blog/introducing-mcpeek" },
+              ].map((l) => (
+                <a key={l.label} href={l.href} className="block text-[12px] transition-colors" style={{ color: "#525252" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#e5e5e5")}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#525252")}
-                >{l}</a>
+                >{l.label}</a>
               ))}
             </div>
           </div>
@@ -620,11 +636,15 @@ function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-6" style={{ borderTop: "1px solid #1a1a1a" }}>
           <p className="text-[11px]" style={{ color: "#404040" }}>&copy; 2026 MCPeek. Open source under MIT License.</p>
           <div className="flex items-center gap-4">
-            {["GitHub", "Twitter", "Discord"].map((s) => (
-              <a key={s} href="#" className="text-[11px] transition-colors" style={{ color: "#404040" }}
+            {[
+              { label: "Demo", href: "/dashboard" },
+              { label: "Blog", href: "/blog/introducing-mcpeek" },
+              { label: "Contact", href: "/contact" },
+            ].map((s) => (
+              <a key={s.label} href={s.href} className="text-[11px] transition-colors" style={{ color: "#404040" }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "#737373")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "#404040")}
-              >{s}</a>
+              >{s.label}</a>
             ))}
           </div>
         </div>
@@ -713,7 +733,7 @@ export default function LandingPage() {
       <StatsBar />
       <BentoFeatures />
       <HowItWorks />
-      <Testimonials />
+      <DemoEvidence />
       <ComparisonTable />
       <FAQ />
       <CTABanner />

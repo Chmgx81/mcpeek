@@ -32,7 +32,7 @@ export default function ContactPage() {
             Get in touch
           </h1>
           <p className="text-[13px]" style={{ color: "#737373" }}>
-            Questions, feedback, or want to contribute? We&apos;d love to hear from you.
+            Demo feedback, contribution ideas, or deployment questions.
           </p>
         </div>
 
@@ -45,7 +45,7 @@ export default function ContactPage() {
               <Check className="h-5 w-5" style={{ color: "#22c55e" }} />
             </div>
             <p className="text-[14px] font-medium" style={{ color: "#e5e5e5" }}>Message sent</p>
-            <p className="text-[12px] mt-1" style={{ color: "#525252" }}>We&apos;ll get back to you within 24 hours.</p>
+            <p className="text-[12px] mt-1" style={{ color: "#525252" }}>This demo stores no messages yet. Use this to preview the contact flow.</p>
           </div>
         ) : (
           <form
