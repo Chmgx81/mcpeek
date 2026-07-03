@@ -4,6 +4,8 @@ from urllib.parse import urlparse
 import httpx
 
 from ..schemas import FindingCreate
+from .ast_analyzer import analyze_js_patterns
+from .content_hash import compute_content_hash
 
 SUSPICIOUS_CONTENT_TYPES = {"application/x-executable", "application/x-msdownload", "application/x-sh"}
 SUSPICIOUS_EXTENSIONS = {".exe", ".bat", ".cmd", ".ps1", ".sh", ".dll", ".so", ".dylib"}
@@ -79,6 +81,12 @@ async def analyze_urls(urls: list[str], timeout: int = 15) -> list[FindingCreate
                                 references=[],
                             )
                         )
+
+                    # Scan downloaded code for dangerous patterns
+                    js_findings = analyze_js_patterns(text)
+                    for jf in js_findings:
+                        jf.evidence = f"URL: {url}\n{jf.evidence}"
+                        findings.append(jf)
 
                 # Check for suspicious script tags in HTML
                 if "text/html" in ct_base:

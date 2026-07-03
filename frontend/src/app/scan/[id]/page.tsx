@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import {
   ArrowLeft, Clock, FileText, Link2, Package, Loader2, AlertTriangle,
-  Shield, Globe, Lock, Swords, ChevronDown, ChevronUp, FileJson, FileCode, Share2, Check,
+  Shield, Globe, Lock, Swords, ChevronDown, ChevronUp, FileJson, FileCode, Share2, Check, RefreshCw, AlertOctagon,
 } from "lucide-react";
 import Link from "next/link";
 import RiskScore from "@/components/RiskScore";
 import FindingCard from "@/components/FindingCard";
 import SeverityBadge from "@/components/SeverityBadge";
 import Logo from "@/components/Logo";
-import { fetchScan, fetchFullReport } from "@/lib/api";
+import { fetchScan, fetchFullReport, rescanScan, fetchContentChanges, type ContentChange } from "@/lib/api";
 import type { ScanResponse, FullReport, AttackScenario } from "@/lib/types";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -56,6 +56,8 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [showExec, setShowExec] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [rescanning, setRescanning] = useState(false);
+  const [contentChanges, setContentChanges] = useState<ContentChange[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +76,34 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
 
     return () => { cancelled = true; controller.abort(); clearTimeout(timeout); };
   }, [id]);
+
+  // Load content changes if this is a re-scan
+  useEffect(() => {
+    if (scan?.rescan_of) {
+      fetchContentChanges(id).then((r) => {
+        if (r.has_changes) setContentChanges(r.changes);
+      }).catch(() => {});
+    }
+  }, [id, scan?.rescan_of]);
+
+  const handleRescan = async () => {
+    setRescanning(true);
+    try {
+      const result = await rescanScan(id);
+      // Poll until complete
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const updated = await fetchScan(result.scan_id);
+        if (updated.status === "completed" || updated.status === "failed") {
+          window.location.href = `/scan/${result.scan_id}`;
+          return;
+        }
+      }
+      setRescanning(false);
+    } catch {
+      setRescanning(false);
+    }
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center py-32" style={{ background: "#0a0a0a" }}>
@@ -168,15 +198,32 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-6 shrink-0">
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[8px] uppercase tracking-widest" style={{ color: "#525252" }}>Security</span>
-                <RiskScore score={scan.overall_risk} size="lg" />
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[8px] uppercase tracking-widest" style={{ color: "#525252" }}>Security</span>
+                  <RiskScore score={scan.overall_risk} size="lg" />
+                </div>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[8px] uppercase tracking-widest" style={{ color: "#525252" }}>Trust</span>
+                  <RiskScore score={trustScore} size="lg" isTrust />
+                </div>
               </div>
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[8px] uppercase tracking-widest" style={{ color: "#525252" }}>Trust</span>
-                <RiskScore score={trustScore} size="lg" isTrust />
-              </div>
+              {scan.status === "completed" && (
+                <button
+                  onClick={handleRescan}
+                  disabled={rescanning}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
+                  style={{
+                    border: "1px solid #262626",
+                    color: rescanning ? "#22c55e" : "#737373",
+                    borderRadius: "3px",
+                  }}
+                >
+                  {rescanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  {rescanning ? "Re-scanning..." : "Re-scan"}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -198,6 +245,28 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
           <span className="flex items-center gap-1"><Link2 className="h-3 w-3" /> {scan.metadata.urls_checked} URLs</span>
           <span className="flex items-center gap-1"><Package className="h-3 w-3" /> {scan.metadata.deps_analyzed} deps</span>
         </div>
+
+        {/* Content change alert */}
+        {(scan.content_changed || contentChanges) && (
+          <div className="p-3 flex items-start gap-2.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px" }}>
+            <AlertOctagon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#ef4444" }} />
+            <div>
+              <p className="text-[12px] font-semibold" style={{ color: "#ef4444" }}>Bait-and-switch detected</p>
+              <p className="text-[11px] mt-0.5" style={{ color: "#a3a3a3" }}>
+                External URL content has changed since the previous scan. This is a strong indicator of a supply-chain attack.
+              </p>
+              {contentChanges && contentChanges.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5">
+                  {contentChanges.map((c, i) => (
+                    <li key={i} className="text-[10px] font-mono" style={{ color: "#737373" }}>
+                      {c.status}: {c.url}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Attack Simulation */}
         {scenarios.length > 0 && (

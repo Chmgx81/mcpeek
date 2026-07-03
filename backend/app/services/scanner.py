@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Finding, Scan
 from ..schemas import FindingCreate, ScanRequest, TargetType
+from .content_hash import compare_hashes, hashes_from_json
 from .mcp_scanner import scan_mcp_server
 from .package_scanner import scan_package
 from .risk_scorer import build_summary, calculate_risk
@@ -55,6 +56,33 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
             all_findings.extend(findings)
             _merge_metadata(metadata, meta)
 
+        # --- Re-scan comparison ---
+        content_hashes = meta.get("content_hashes", {})
+        if request.rescan_of and content_hashes:
+            prev_result = await db.execute(select(Scan).where(Scan.id == request.rescan_of))
+            prev_scan = prev_result.scalar_one_or_none()
+            if prev_scan:
+                old_hashes = hashes_from_json(prev_scan.content_hashes_json or "{}")
+                changes = compare_hashes(old_hashes, content_hashes)
+                if changes:
+                    for change in changes:
+                        sev = "critical" if change["status"] == "changed" else "high"
+                        all_findings.append(FindingCreate(
+                            category="supply_chain",
+                            severity=sev,
+                            title=f"External URL content changed: {change['status']}",
+                            description=(
+                                f"URL {change['url']} has {change['status']} since the previous scan. "
+                                f"This is a strong indicator of a bait-and-switch attack."
+                            ),
+                            evidence=f"URL: {change['url']}\nStatus: {change['status']}\nOld hash: {change.get('old_hash', 'N/A')[:16]}...\nNew hash: {change.get('new_hash', 'N/A')[:16]}...",
+                            remediation="Review the URL content immediately. If this skill was approved, revoke access.",
+                            cwe="CWE-345",
+                        ))
+                    # Escalate risk if content changed
+                    metadata["content_changed"] = True
+                    metadata["changed_urls"] = [c["url"] for c in changes]
+
         # Calculate risk
         overall_risk, risk_level = calculate_risk(all_findings)
         summary = build_summary(all_findings)
@@ -77,6 +105,7 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
             db.add(db_finding)
 
         # Update scan
+        from .content_hash import hashes_to_json
         scan.status = "completed"
         scan.overall_risk = overall_risk
         scan.risk_level = risk_level
@@ -85,6 +114,9 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
         scan.files_analyzed = metadata.get("files_analyzed", 0)
         scan.urls_checked = metadata.get("urls_checked", 0)
         scan.deps_analyzed = metadata.get("deps_analyzed", 0)
+        scan.content_hashes_json = hashes_to_json(content_hashes) if content_hashes else "{}"
+        if request.rescan_of:
+            scan.rescan_of = request.rescan_of
 
         await db.commit()
 
@@ -105,3 +137,8 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
 def _merge_metadata(target: dict, source: dict) -> None:
     for key in ("files_analyzed", "urls_checked", "deps_analyzed"):
         target[key] = target.get(key, 0) + source.get(key, 0)
+    # Preserve content hashes and dependency risk score
+    if "content_hashes" in source:
+        target["content_hashes"] = source["content_hashes"]
+    if "dependency_risk_score" in source:
+        target["dependency_risk_score"] = source["dependency_risk_score"]

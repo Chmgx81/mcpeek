@@ -25,6 +25,8 @@ const CAT_LABELS: Record<string, string> = {
   external_resources: "External Resources",
   manifest: "Manifest",
   package: "Package",
+  code_execution: "Code Execution",
+  obfuscation: "Obfuscation",
 };
 
 export default function FindingCard({ finding }: { finding: Finding }) {

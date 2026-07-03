@@ -12,7 +12,9 @@ export interface ScanRequest {
   options?: {
     deep?: boolean;
     timeout?: number;
+    inline_content?: string;
   };
+  rescan_of?: string;
 }
 
 export interface Finding {
@@ -52,6 +54,8 @@ export interface ScanResponse {
   findings: Finding[];
   metadata: ScanMeta;
   created_at: string;
+  content_changed?: boolean;
+  rescan_of?: string;
 }
 
 export interface PaginatedScans {

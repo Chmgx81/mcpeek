@@ -3,8 +3,6 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./mcpeek.db"
-    SCAN_TIMEOUT: int = 120
-    MAX_CONCURRENT_SCANS: int = 10
     MAX_TARGET_LENGTH: int = 2048
     MAX_INLINE_CONTENT_BYTES: int = 500_000
     MAX_REMOTE_BYTES: int = 1_000_000

@@ -6,6 +6,10 @@ import httpx
 from ..detection.patterns import DANGEROUS_PERMISSIONS, PROMPT_INJECTION_PATTERNS
 from ..detection.utils import detect_secrets, extract_urls
 from ..schemas import FindingCreate
+from .ast_analyzer import analyze_code
+from .advanced_injection import detect_advanced_injection
+from .content_hash import hash_external_urls
+from .dependency_risk import analyze_domain_reputation, score_urls
 from .external_analyzer import analyze_urls
 
 SUSPICIOUS_URL_PATTERNS = [
@@ -25,7 +29,7 @@ SUSPICIOUS_SCRIPT_PATTERNS = [
 
 async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, inline_content: str | None = None) -> tuple[list[FindingCreate], dict]:
     findings: list[FindingCreate] = []
-    metadata: dict = {"files_analyzed": 0, "urls_checked": 0, "deps_analyzed": 0}
+    metadata: dict = {"files_analyzed": 0, "urls_checked": 0, "deps_analyzed": 0, "content_hashes": {}}
     urls_found: list[str] = []
 
     if inline_content:
@@ -64,6 +68,12 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
     findings.extend(detect_secrets(content, target))
     findings.extend(_check_dependencies(manifest, metadata))
 
+    # AST-based code analysis (beyond regex)
+    findings.extend(analyze_code(content))
+
+    # Advanced prompt injection detection
+    findings.extend(detect_advanced_injection(content, target))
+
     # Extract URLs for external analysis
     urls_found.extend(extract_urls(content))
     urls_found.extend(extract_urls(json.dumps(manifest) if manifest else ""))
@@ -73,6 +83,19 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
         url_findings, checked = await analyze_urls(urls_found, timeout=min(timeout, 15))
         findings.extend(url_findings)
         metadata["urls_checked"] = checked
+
+        # Content hashing for bait-and-switch detection
+        url_hashes = await hash_external_urls(urls_found, timeout=min(timeout, 10))
+        metadata["content_hashes"] = url_hashes
+
+        # Dependency risk scoring
+        risk_findings, risk_score = score_urls(urls_found)
+        findings.extend(risk_findings)
+        metadata["dependency_risk_score"] = risk_score
+
+        # Domain reputation analysis
+        domain_findings = analyze_domain_reputation(urls_found)
+        findings.extend(domain_findings)
 
     return findings, metadata
 

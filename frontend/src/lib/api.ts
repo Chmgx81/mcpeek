@@ -56,3 +56,26 @@ export function fetchReport(
 ): Promise<{ format: string; content: string | object }> {
   return request(`/report/${id}/export?format=${format}`);
 }
+
+export function rescanScan(id: string): Promise<{ scan_id: string; status: string; rescan_of: string }> {
+  return request(`/scan/${id}/rescan`, { method: "POST" });
+}
+
+export interface ContentChange {
+  url: string;
+  old_hash: string | null;
+  new_hash: string | null;
+  status: "changed" | "added" | "removed";
+}
+
+export interface ContentChangesResponse {
+  scan_id: string;
+  rescan_of: string;
+  changes: ContentChange[];
+  total_changes: number;
+  has_changes: boolean;
+}
+
+export function fetchContentChanges(id: string): Promise<ContentChangesResponse> {
+  return request(`/scan/${id}/changes`);
+}

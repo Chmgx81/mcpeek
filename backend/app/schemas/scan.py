@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from ..config import settings
 
 
 class TargetType(str, Enum):
@@ -14,13 +16,32 @@ class TargetType(str, Enum):
 
 class ScanOptions(BaseModel):
     deep: bool = True
-    timeout: int = 120
+    timeout: int = Field(default=120, ge=1, le=120)
+    inline_content: str | None = Field(default=None, max_length=settings.MAX_INLINE_CONTENT_BYTES)
+
+    @field_validator("inline_content")
+    @classmethod
+    def validate_inline_content(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if len(value.encode("utf-8")) > settings.MAX_INLINE_CONTENT_BYTES:
+            raise ValueError("inline content exceeds maximum allowed size")
+        return value
 
 
 class ScanRequest(BaseModel):
     target_type: TargetType
-    target: str
+    target: str = Field(min_length=1, max_length=settings.MAX_TARGET_LENGTH)
     options: ScanOptions = Field(default_factory=ScanOptions)
+    rescan_of: str | None = Field(default=None, max_length=36)
+
+    @field_validator("target")
+    @classmethod
+    def normalize_target(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("target cannot be empty")
+        return cleaned
 
 
 class FindingCreate(BaseModel):
@@ -62,6 +83,7 @@ class ScanResponse(BaseModel):
     metadata: dict[str, int | dict]
     created_at: str | None = None
     error_message: str | None = None
+    content_changed: bool = False
 
 
 class ReportResponse(BaseModel):

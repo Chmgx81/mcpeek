@@ -152,22 +152,22 @@ def _meta(scan: Scan) -> dict:
 
 @router.post("/scan")
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
-async def submit_scan(request: ScanRequest, request_obj: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     import uuid
 
-    _validate_target(request.target, request.target_type.value)
+    _validate_target(scan_req.target, scan_req.target_type.value)
 
     scan_id = str(uuid.uuid4())
     scan = Scan(
         id=scan_id,
-        target=request.target,
-        target_type=request.target_type.value,
+        target=scan_req.target,
+        target_type=scan_req.target_type.value,
         status="pending",
     )
     db.add(scan)
     await db.commit()
 
-    background_tasks.add_task(_run_scan_task, scan_id, request)
+    background_tasks.add_task(_run_scan_task, scan_id, scan_req)
 
     return {"scan_id": scan_id, "status": "pending"}
 
@@ -207,7 +207,87 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
         metadata=_meta(scan),
         created_at=scan.created_at.isoformat() if scan.created_at else None,
         error_message=scan.error_message,
+        content_changed=scan.content_hashes_json != "{}" and scan.rescan_of is not None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Re-scan a previously scanned target (detect bait-and-switch)
+# ---------------------------------------------------------------------------
+
+@router.post("/scan/{scan_id}/rescan")
+@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
+async def rescan_scan(
+    request: Request,
+    scan_id: str,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """Re-scan the same target as a previous scan, comparing URL content hashes."""
+    result = await db.execute(select(Scan).where(Scan.id == scan_id))
+    prev_scan = result.scalar_one_or_none()
+    if not prev_scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    if prev_scan.status not in ("completed", "failed"):
+        raise HTTPException(status_code=400, detail="Previous scan is still in progress")
+
+    from ..schemas import ScanOptions
+    new_req = ScanRequest(
+        target_type=prev_scan.target_type,
+        target=prev_scan.target,
+        options=ScanOptions(deep=True),
+        rescan_of=scan_id,
+    )
+
+    import uuid
+    new_id = str(uuid.uuid4())
+    new_scan = Scan(
+        id=new_id,
+        target=prev_scan.target,
+        target_type=prev_scan.target_type,
+        status="pending",
+        rescan_of=scan_id,
+    )
+    db.add(new_scan)
+    await db.commit()
+
+    background_tasks.add_task(_run_scan_task, new_id, new_req)
+
+    return {"scan_id": new_id, "status": "pending", "rescan_of": scan_id}
+
+
+# ---------------------------------------------------------------------------
+# Content change comparison
+# ---------------------------------------------------------------------------
+
+@router.get("/scan/{scan_id}/changes")
+async def get_content_changes(scan_id: str, db: AsyncSession = Depends(get_db)):
+    """Compare this scan's URL content hashes against the scan it was based on."""
+    result = await db.execute(select(Scan).where(Scan.id == scan_id))
+    scan = result.scalar_one_or_none()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    if not scan.rescan_of:
+        raise HTTPException(status_code=400, detail="This scan is not a re-scan")
+
+    from ..services.content_hash import compare_hashes, hashes_from_json
+    new_hashes = hashes_from_json(scan.content_hashes_json or "{}")
+
+    prev_result = await db.execute(select(Scan).where(Scan.id == scan.rescan_of))
+    prev_scan = prev_result.scalar_one_or_none()
+    if not prev_scan:
+        raise HTTPException(status_code=404, detail="Previous scan not found")
+
+    old_hashes = hashes_from_json(prev_scan.content_hashes_json or "{}")
+    changes = compare_hashes(old_hashes, new_hashes)
+
+    return {
+        "scan_id": scan_id,
+        "rescan_of": scan.rescan_of,
+        "changes": changes,
+        "total_changes": len(changes),
+        "has_changes": len(changes) > 0,
+    }
 
 
 # ---------------------------------------------------------------------------

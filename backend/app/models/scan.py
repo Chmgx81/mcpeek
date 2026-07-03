@@ -31,6 +31,8 @@ class Scan(Base):
     deps_analyzed: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_hashes_json: Mapped[str] = mapped_column(Text, default="{}")
+    rescan_of: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     findings: Mapped[list["Finding"]] = relationship(back_populates="scan", lazy="selectin")
 
