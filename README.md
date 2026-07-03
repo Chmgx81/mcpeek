@@ -12,6 +12,8 @@
 <p align="center">
   <a href="#quickstart">Quickstart</a> •
   <a href="#features">Features</a> •
+  <a href="#ci-gate">CI Gate</a> •
+  <a href="#demo-fixtures">Demo Fixtures</a> •
   <a href="#api">API</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#license">License</a>
@@ -81,6 +83,48 @@ Scan a config file directly without the web UI:
 cd backend && source .venv/bin/activate
 python -m app.static_scan path/to/config.json
 ```
+
+Block CI when the risk level reaches a threshold:
+
+```bash
+python -m app.static_scan ../examples/vulnerable-mcp-curl-shell.json --summary --fail-on high
+```
+
+`--fail-on` accepts `safe`, `low`, `medium`, `high`, or `critical`. A policy failure exits with code `2`.
+
+## CI Gate
+
+MCPeek ships as a composite GitHub Action. Add this to a workflow to block unsafe MCP configs in pull requests:
+
+```yaml
+name: MCPeek
+
+on: [pull_request]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          path: examples/vulnerable-mcp-curl-shell.json
+          fail-on: high
+```
+
+## Demo Fixtures
+
+Use these files to verify that MCPeek catches real AI-agent supply-chain risks:
+
+| File | Purpose |
+|------|---------|
+| `examples/safe-mcp.json` | Low-risk control sample |
+| `examples/vulnerable-mcp-curl-shell.json` | MCP config with curl-to-shell, prompt injection, dangerous tools, and secrets |
+| `examples/vulnerable-agent-skill.md` | Agent skill with hidden instructions, exfiltration, and dangerous permissions |
+| `examples/prompt-injection-skill.md` | Focused prompt-injection sample |
+| `examples/secret-leak-config.json` | Hardcoded token sample |
+
+Hackathon demo notes are in [`docs/HACKATHON_DEMO.md`](docs/HACKATHON_DEMO.md).
 
 ## Stack
 

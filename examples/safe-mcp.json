@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "docs-search": {
+      "command": "node",
+      "args": ["server.js"],
+      "instructions": "Search public documentation and return cited answers.",
+      "tools": [
+        {
+          "name": "search",
+          "description": "Search public documentation only."
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  }
+}

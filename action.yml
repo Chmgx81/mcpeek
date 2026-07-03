@@ -1,0 +1,26 @@
+name: MCPeek Security Scan
+description: Scan MCP configs and AI agent skills for prompt injection, shell execution, secrets, and risky permissions.
+branding:
+  icon: shield
+  color: green
+inputs:
+  path:
+    description: File path to scan
+    required: true
+  fail-on:
+    description: Minimum risk level that should fail the workflow (safe, low, medium, high, critical)
+    required: false
+    default: high
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install MCPeek
+      shell: bash
+      run: pip install "$GITHUB_ACTION_PATH/backend"
+    - name: Run MCPeek scan
+      shell: bash
+      run: python -m app.static_scan "${{ inputs.path }}" --summary --fail-on "${{ inputs.fail-on }}"
