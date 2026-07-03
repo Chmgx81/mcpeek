@@ -7,8 +7,8 @@ import { submitScan, fetchScan } from "@/lib/api";
 import type { TargetType } from "@/lib/types";
 
 const TYPES: { value: TargetType; label: string; placeholder: string }[] = [
-  { value: "mcp_server", label: "MCP Server", placeholder: "GitHub URL or local path" },
-  { value: "agent_skill", label: "Agent Skill", placeholder: "GitHub URL" },
+  { value: "mcp_server", label: "MCP Server", placeholder: "GitHub/raw URL or paste config" },
+  { value: "agent_skill", label: "Agent Skill", placeholder: "GitHub/raw URL or paste skill" },
   { value: "npm_package", label: "npm Package", placeholder: "package-name" },
   { value: "pypi_package", label: "PyPI Package", placeholder: "package-name" },
 ];
@@ -125,6 +125,7 @@ export default function ScanForm() {
 
       {/* URL mode */}
       {inputMode === "url" && (
+        <>
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative sm:w-40 shrink-0">
             <select
@@ -153,6 +154,10 @@ export default function ScanForm() {
             />
           </div>
         </div>
+        <p className="mt-1.5 text-[11px]" style={{ color: "#404040" }}>
+          Public deployments block local file paths. Use Paste Config for local files or examples.
+        </p>
+        </>
       )}
 
       {/* Text mode */}

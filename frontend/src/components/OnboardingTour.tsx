@@ -34,6 +34,7 @@ export default function OnboardingTour() {
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (window.innerWidth < 768) return;
     const dismissed = localStorage.getItem("mcpeek-onboarding-done");
     if (dismissed) return;
 
@@ -50,11 +51,15 @@ export default function OnboardingTour() {
 
     const updatePosition = () => {
       const el = document.querySelector(current.target);
-      if (!el) return;
+      if (!el) {
+        setVisible(false);
+        return;
+      }
       const rect = el.getBoundingClientRect();
+      const tooltipWidth = 280;
       setPosition({
-        top: rect.top + rect.height / 2,
-        left: rect.left + rect.width / 2,
+        top: Math.min(rect.top + rect.height / 2, window.innerHeight - 220),
+        left: Math.max(16, Math.min(rect.left + rect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16)),
       });
     };
 
@@ -98,7 +103,7 @@ export default function OnboardingTour() {
         className="fixed z-[61] pointer-events-none transition-all duration-300"
         style={{
           top: position.top - 24,
-          left: position.left - 24,
+          left: position.left + 140 - 24,
           width: 48,
           height: 48,
           borderRadius: "8px",
@@ -113,7 +118,7 @@ export default function OnboardingTour() {
         className="fixed z-[62] w-[280px] p-4"
         style={{
           top: position.top + 36,
-          left: Math.min(position.left - 140, window.innerWidth - 300),
+          left: position.left,
           background: "#111111",
           border: "1px solid #1a1a1a",
           borderRadius: "6px",

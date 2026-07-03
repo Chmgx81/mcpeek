@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight, FileSearch, Globe, Lock, Terminal, Eye, ChevronDown,
@@ -432,31 +432,33 @@ function ComparisonTable() {
             Why MCPeek
           </h2>
         </div>
-        <div style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px", overflow: "hidden" }}>
-          <div className="grid grid-cols-4 text-[11px] font-medium uppercase tracking-wider" style={{ borderBottom: "1px solid #1a1a1a" }}>
+        <div className="overflow-x-auto" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
+          <div className="min-w-[620px]">
+            <div className="grid grid-cols-4 text-[11px] font-medium uppercase tracking-wider" style={{ borderBottom: "1px solid #1a1a1a" }}>
             <div className="px-4 py-3" style={{ color: "#525252" }}>Feature</div>
             <div className="px-4 py-3 text-center" style={{ color: "#22c55e" }}>MCPeek</div>
             <div className="px-4 py-3 text-center" style={{ color: "#737373" }}>Generic Scanner</div>
             <div className="px-4 py-3 text-center" style={{ color: "#737373" }}>Traditional SAST</div>
           </div>
-          {features.map((f, i) => (
-            <div
-              key={f.name}
-              className="grid grid-cols-4 text-[12px] items-center"
-              style={{ borderBottom: i < features.length - 1 ? "1px solid #1a1a1a" : "none" }}
-            >
-              <div className="px-4 py-2.5" style={{ color: "#a3a3a3" }}>{f.name}</div>
-              <div className="px-4 py-2.5 flex justify-center">
-                {f.mcpeek ? <Check className="h-3.5 w-3.5" style={{ color: "#22c55e" }} /> : <XIcon className="h-3.5 w-3.5" style={{ color: "#333" }} />}
+            {features.map((f, i) => (
+              <div
+                key={f.name}
+                className="grid grid-cols-4 text-[12px] items-center"
+                style={{ borderBottom: i < features.length - 1 ? "1px solid #1a1a1a" : "none" }}
+              >
+                <div className="px-4 py-2.5" style={{ color: "#a3a3a3" }}>{f.name}</div>
+                <div className="px-4 py-2.5 flex justify-center">
+                  {f.mcpeek ? <Check className="h-3.5 w-3.5" style={{ color: "#22c55e" }} /> : <XIcon className="h-3.5 w-3.5" style={{ color: "#333" }} />}
+                </div>
+                <div className="px-4 py-2.5 flex justify-center">
+                  {f.generic ? <Check className="h-3.5 w-3.5" style={{ color: "#525252" }} /> : <XIcon className="h-3.5 w-3.5" style={{ color: "#333" }} />}
+                </div>
+                <div className="px-4 py-2.5 flex justify-center">
+                  {f.traditional ? <Check className="h-3.5 w-3.5" style={{ color: "#525252" }} /> : <XIcon className="h-3.5 w-3.5" style={{ color: "#333" }} />}
+                </div>
               </div>
-              <div className="px-4 py-2.5 flex justify-center">
-                {f.generic ? <Check className="h-3.5 w-3.5" style={{ color: "#525252" }} /> : <XIcon className="h-3.5 w-3.5" style={{ color: "#333" }} />}
-              </div>
-              <div className="px-4 py-2.5 flex justify-center">
-                {f.traditional ? <Check className="h-3.5 w-3.5" style={{ color: "#525252" }} /> : <XIcon className="h-3.5 w-3.5" style={{ color: "#333" }} />}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

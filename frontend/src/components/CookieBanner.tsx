@@ -25,7 +25,7 @@ export default function CookieBanner() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 w-[320px] p-4"
+      className="fixed bottom-4 left-4 right-4 z-50 p-4 sm:left-auto sm:w-[320px]"
       style={{
         background: "#111111",
         border: "1px solid #1a1a1a",
@@ -70,13 +70,9 @@ export default function CookieBanner() {
         </button>
       </div>
 
-      <button
-        onClick={reject}
-        className="mt-2 text-[10px] underline"
-        style={{ color: "#525252" }}
-      >
-        Learn more
-      </button>
+      <p className="mt-2 text-[10px]" style={{ color: "#525252" }}>
+        Essential storage only: cookie consent and onboarding state.
+      </p>
     </div>
   );
 }

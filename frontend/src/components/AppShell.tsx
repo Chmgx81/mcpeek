@@ -16,7 +16,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Sidebar />
-      <main className="md:ml-56 min-h-screen" style={{ background: "#0a0a0a" }}>{children}</main>
+      <main className="min-h-screen pt-12 md:ml-56 md:pt-0" style={{ background: "#0a0a0a" }}>{children}</main>
       <CookieBanner />
     </>
   );
