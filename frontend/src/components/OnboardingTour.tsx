@@ -21,16 +21,17 @@ const STEPS: Step[] = [
     description: "Track total scans, findings by severity, and your risk distribution over time.",
   },
   {
-    target: "[data-tour='sidebar']",
-    title: "Navigation",
-    description: "Jump between Dashboard, History, and your account settings from here.",
+    target: "[data-tour='recent-scans']",
+    title: "Recent scans",
+    description: "Quickly access your latest scan results from the dashboard.",
   },
 ];
 
 export default function OnboardingTour() {
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [highlight, setHighlight] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,11 +57,21 @@ export default function OnboardingTour() {
         return;
       }
       const rect = el.getBoundingClientRect();
-      const tooltipWidth = 280;
-      setPosition({
-        top: Math.min(rect.top + rect.height / 2, window.innerHeight - 220),
-        left: Math.max(16, Math.min(rect.left + rect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16)),
+      const padding = 8;
+
+      setHighlight({
+        top: rect.top - padding,
+        left: rect.left - padding,
+        width: rect.width + padding * 2,
+        height: rect.height + padding * 2,
       });
+
+      const tooltipWidth = 280;
+      const centerX = rect.left + rect.width / 2;
+      const left = Math.max(16, Math.min(centerX - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
+      const top = rect.bottom + 12;
+
+      setTooltipPos({ top, left });
     };
 
     updatePosition();
@@ -93,19 +104,19 @@ export default function OnboardingTour() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[60] pointer-events-auto"
+        className="fixed inset-0 z-[60]"
         style={{ background: "rgba(0,0,0,0.5)" }}
         onClick={finish}
       />
 
-      {/* Highlight ring */}
+      {/* Highlight ring — centered on element */}
       <div
         className="fixed z-[61] pointer-events-none transition-all duration-300"
         style={{
-          top: position.top - 24,
-          left: position.left + 140 - 24,
-          width: 48,
-          height: 48,
+          top: highlight.top,
+          left: highlight.left,
+          width: highlight.width,
+          height: highlight.height,
           borderRadius: "8px",
           border: "2px solid #22c55e",
           boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
@@ -117,8 +128,8 @@ export default function OnboardingTour() {
         ref={tooltipRef}
         className="fixed z-[62] w-[280px] p-4"
         style={{
-          top: position.top + 36,
-          left: position.left,
+          top: tooltipPos.top,
+          left: tooltipPos.left,
           background: "#111111",
           border: "1px solid #1a1a1a",
           borderRadius: "6px",

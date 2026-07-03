@@ -10,7 +10,7 @@ import Link from "next/link";
 import RiskScore from "@/components/RiskScore";
 import FindingCard from "@/components/FindingCard";
 import SeverityBadge from "@/components/SeverityBadge";
-import Logo from "@/components/Logo";
+import ConfirmModal from "@/components/ConfirmModal";
 import { fetchScan, fetchFullReport, rescanScan, fetchContentChanges, deleteScan, type ContentChange } from "@/lib/api";
 import type { ScanResponse, FullReport, AttackScenario } from "@/lib/types";
 
@@ -58,6 +58,7 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   const [copied, setCopied] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [contentChanges, setContentChanges] = useState<ContentChange[] | null>(null);
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this scan? This cannot be undone.")) return;
+    setConfirmDelete(false);
     setDeleting(true);
     try {
       await deleteScan(id);
@@ -150,13 +151,13 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   const high = scan.summary.high;
 
   const runtimeRisks = scan.findings.filter((f) =>
-    ["remote_code_execution", "exfiltration", "system_modification"].includes(f.category)
+    ["execution", "code_execution", "exfiltration", "manifest"].includes(f.category)
   ).length;
   const trustRisks = scan.findings.filter((f) =>
-    ["external_dependencies", "unpinned_packages", "suspicious_domain", "unofficial_source"].includes(f.category)
+    ["supply_chain", "permissions", "social_engineering"].includes(f.category)
   ).length;
 
-  const trustScore = report?.json?.scores?.trust_score?.value ?? Math.max(0, 100 - trustRisks * 15 - runtimeRisks * 10);
+  const trustScore = report?.json?.scores?.trust_score?.value ?? Math.max(0, 100 - trustRisks * 12 - runtimeRisks * 8);
 
   const recommendations = report?.json?.recommendations?.length ? report.json.recommendations : (() => {
     const r: string[] = [];
@@ -237,7 +238,7 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
                 </button>
               )}
               <button
-                onClick={handleDelete}
+                onClick={() => setConfirmDelete(true)}
                 disabled={deleting}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
                 style={{
@@ -382,6 +383,15 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmDelete}
+        title="Delete scan"
+        message="This scan and all its findings will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }
