@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Eye shape -->
+  <path d="M10 60C10 60 30 25 60 25C90 25 110 60 110 60C110 60 90 95 60 95C30 95 10 60 10 60Z" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="2"/>
+  <!-- Pupil -->
+  <circle cx="55" cy="60" r="14" fill="#111111"/>
+  <circle cx="55" cy="60" r="8" fill="#1a1a1a"/>
+  <!-- Circuit traces (left side) -->
+  <circle cx="14" cy="42" r="4" fill="#2a2a2a" stroke="#3a3a3a" stroke-width="1"/>
+  <line x1="18" y1="42" x2="30" y2="48" stroke="#3a3a3a" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="10" cy="60" r="4" fill="#2a2a2a" stroke="#3a3a3a" stroke-width="1"/>
+  <line x1="14" y1="60" x2="30" y2="60" stroke="#3a3a3a" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="14" cy="78" r="4" fill="#2a2a2a" stroke="#3a3a3a" stroke-width="1"/>
+  <line x1="18" y1="78" x2="30" y2="72" stroke="#3a3a3a" stroke-width="2" stroke-linecap="round"/>
+  <!-- Magnifying glass circle -->
+  <circle cx="82" cy="58" r="22" fill="none" stroke="#2a2a2a" stroke-width="4"/>
+  <!-- Magnifying glass handle -->
+  <line x1="98" y1="74" x2="112" y2="88" stroke="#2a2a2a" stroke-width="5" stroke-linecap="round"/>
+  <!-- Green glow -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="82" cy="58" r="18" fill="url(#glow)"/>
+  <!-- Lock body -->
+  <rect x="74" y="54" width="16" height="13" rx="2" fill="#22c55e"/>
+  <!-- Lock shackle -->
+  <path d="M78 54V49C78 46.2 80.2 44 83 44C85.8 44 88 46.2 88 49V54" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Keyhole -->
+  <circle cx="82" cy="59" r="1.5" fill="#0a0a0a"/>
+  <rect x="81.25" y="59" width="1.5" height="4" rx="0.75" fill="#0a0a0a"/>
+</svg>
