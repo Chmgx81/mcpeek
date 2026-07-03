@@ -59,7 +59,7 @@ async def _fetch_skill_content(target: str, timeout: int) -> str:
             async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
                 resp = await client.get(target)
                 resp.raise_for_status()
-                return resp.text
+                return resp.content[:1_000_000].decode(resp.encoding or "utf-8", errors="replace")
         except Exception:
             return ""
     else:
@@ -213,4 +213,3 @@ def _check_hidden_instructions(content: str, source: str) -> list[FindingCreate]
         )
 
     return findings
-

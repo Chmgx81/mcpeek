@@ -64,7 +64,7 @@ async def analyze_urls(urls: list[str], timeout: int = 15) -> list[FindingCreate
 
                 # Check for base64 payloads in text responses
                 if "text" in ct_base or "json" in ct_base:
-                    text = resp.text[:50000]
+                    text = resp.content[:50000].decode(resp.encoding or "utf-8", errors="replace")
                     b64_matches = re.findall(r"[A-Za-z0-9+/]{40,}={0,2}", text)
                     long_b64 = [m for m in b64_matches if len(m) > 100]
                     if long_b64:
@@ -82,7 +82,8 @@ async def analyze_urls(urls: list[str], timeout: int = 15) -> list[FindingCreate
 
                 # Check for suspicious script tags in HTML
                 if "text/html" in ct_base:
-                    scripts = re.findall(r"<script[^>]*>(.*?)</script>", resp.text[:100000], re.DOTALL)
+                    html = resp.content[:100000].decode(resp.encoding or "utf-8", errors="replace")
+                    scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, re.DOTALL)
                     for script in scripts:
                         if re.search(r"(eval|Function\(|document\.write|innerHTML\s*=)", script):
                             findings.append(

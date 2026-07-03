@@ -82,7 +82,7 @@ async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             resp = await client.get(url)
             resp.raise_for_status()
-            text = resp.text
+            text = resp.content[:1_000_000].decode(resp.encoding or "utf-8", errors="replace")
             try:
                 return text, resp.json()
             except json.JSONDecodeError:
@@ -229,5 +229,4 @@ def _check_dependencies(manifest: dict | None, metadata: dict) -> list[FindingCr
         )
 
     return findings
-
 

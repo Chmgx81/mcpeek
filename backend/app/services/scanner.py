@@ -1,6 +1,6 @@
 import json
+import logging
 import time
-import traceback
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,8 @@ from .mcp_scanner import scan_mcp_server
 from .package_scanner import scan_package
 from .risk_scorer import build_summary, calculate_risk
 from .skill_scanner import scan_skill
+
+logger = logging.getLogger(__name__)
 
 
 async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None:
@@ -87,12 +89,13 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
         await db.commit()
 
     except Exception as e:
+        logger.exception("Scan %s failed", scan_id)
         duration_ms = int((time.monotonic() - start) * 1000)
         try:
             result = await db.execute(select(Scan).where(Scan.id == scan_id))
             scan = result.scalar_one()
             scan.status = "failed"
-            scan.error_message = f"{type(e).__name__}: {e}\n{traceback.format_exc()[-500:]}"
+            scan.error_message = f"{type(e).__name__}: scan failed"
             scan.scan_duration_ms = duration_ms
             await db.commit()
         except Exception:

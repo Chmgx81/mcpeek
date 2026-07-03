@@ -1,5 +1,6 @@
 import json
 import ipaddress
+import socket
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -36,13 +37,47 @@ _BLOCKED_NETWORKS = [
     ipaddress.ip_network("192.168.0.0/16"),
     ipaddress.ip_network("127.0.0.0/8"),
     ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("0.0.0.0/8"),
+    ipaddress.ip_network("100.64.0.0/10"),
+    ipaddress.ip_network("192.0.0.0/24"),
+    ipaddress.ip_network("192.0.2.0/24"),
+    ipaddress.ip_network("198.18.0.0/15"),
+    ipaddress.ip_network("198.51.100.0/24"),
+    ipaddress.ip_network("203.0.113.0/24"),
+    ipaddress.ip_network("224.0.0.0/4"),
+    ipaddress.ip_network("240.0.0.0/4"),
     ipaddress.ip_network("::1/128"),
     ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
 ]
+
+
+def _is_blocked_host(hostname: str) -> bool:
+    try:
+        addresses = [ipaddress.ip_address(hostname)]
+    except ValueError:
+        try:
+            infos = socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
+        except socket.gaierror:
+            raise HTTPException(status_code=400, detail="Invalid URL: hostname cannot be resolved")
+        addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
+
+    return any(any(ip in net for net in _BLOCKED_NETWORKS) for ip in addresses)
 
 
 def _validate_target(target: str, target_type: str) -> None:
     """Validate scan target to prevent SSRF and other abuses."""
+    if len(target) > settings.MAX_TARGET_LENGTH:
+        raise HTTPException(status_code=400, detail="Target is too long")
+
+    if target == "__inline_config__":
+        return
+
+    if target_type in ("mcp_server", "agent_skill") and not target.startswith(("http://", "https://")):
+        if not settings.ALLOW_LOCAL_PATH_SCANS:
+            raise HTTPException(status_code=400, detail="Local path scans are disabled in this environment")
+        return
+
     if target_type in ("mcp_server", "agent_skill") and target.startswith("http"):
         parsed = urlparse(target)
         if parsed.scheme not in ("http", "https"):
@@ -50,16 +85,11 @@ def _validate_target(target: str, target_type: str) -> None:
         hostname = parsed.hostname
         if not hostname:
             raise HTTPException(status_code=400, detail="Invalid URL: no hostname")
-        try:
-            ip = ipaddress.ip_address(hostname)
-            for net in _BLOCKED_NETWORKS:
-                if ip in net:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Scanning private/reserved IPs is not allowed: {hostname}",
-                    )
-        except ValueError:
-            pass  # hostname is a domain, not an IP — OK
+        if not settings.ALLOW_PRIVATE_NETWORK_SCANS and _is_blocked_host(hostname):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Scanning private/reserved network targets is not allowed: {hostname}",
+            )
 
 
 # ---------------------------------------------------------------------------

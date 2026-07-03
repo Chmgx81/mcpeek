@@ -1,4 +1,6 @@
 
+import re
+
 import httpx
 
 from ..schemas import FindingCreate
@@ -35,6 +37,18 @@ async def scan_package(target: str, target_type: str, deep: bool = True, timeout
     findings: list[FindingCreate] = []
     metadata: dict = {"files_analyzed": 0, "urls_checked": 0, "deps_analyzed": 0}
 
+    if not _valid_package_name(target):
+        findings.append(
+            FindingCreate(
+                category="package",
+                severity="info",
+                title="Invalid package name",
+                description="The package name contains unsupported characters or is too long.",
+                remediation="Use a valid npm or PyPI package name.",
+            )
+        )
+        return findings, metadata
+
     is_npm = target_type == "npm_package"
     registry_url = f"https://registry.npmjs.org/{target}" if is_npm else f"https://pypi.org/pypi/{target}/json"
 
@@ -67,6 +81,10 @@ async def scan_package(target: str, target_type: str, deep: bool = True, timeout
     findings.extend(_check_typosquatting(target, "npm" if is_npm else "pypi"))
 
     return findings, metadata
+
+
+def _valid_package_name(name: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z0-9_.@/\-]{1,214}", name)) and ".." not in name
 
 
 def _analyze_npm_package(name: str, data: dict, metadata: dict) -> list[FindingCreate]:

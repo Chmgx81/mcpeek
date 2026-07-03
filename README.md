@@ -151,6 +151,9 @@ Input → Parser → Static Scanner → Runtime Analyzer → Trust Analyzer → 
 - **CORS:** Configurable origins
 - **SSRF protection:** Blocks private/reserved IPs
 - **URL validation:** http/https only
+- **Input limits:** target, inline config, and remote content size limits
+
+Production deployment notes are in [`docs/PRODUCTION.md`](docs/PRODUCTION.md).
 
 ## Environment Variables
 
@@ -158,6 +161,8 @@ Input → Parser → Static Scanner → Runtime Analyzer → Trust Analyzer → 
 |----------|---------|-------------|
 | `MCPEEK_CORS_ORIGINS` | `http://localhost:3000` | Allowed origins |
 | `MCPEEK_RATE_LIMIT_PER_MINUTE` | `10` | Max scans per IP/min |
+| `MCPEEK_ALLOW_LOCAL_PATH_SCANS` | `false` | Allow scanning local backend paths |
+| `MCPEEK_ALLOW_PRIVATE_NETWORK_SCANS` | `false` | Allow scanning private/reserved network targets |
 
 ## License
 

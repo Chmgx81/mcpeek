@@ -11,6 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "MCPeek — Runtime-Aware Security Scanner for MCP Servers & AI Agents",
   description: "Detect hidden threats in MCP servers, AI agent skills, and toolchains. Runtime-aware scanning catches what static analyzers miss. No account required.",
   keywords: ["MCP", "MCP server", "AI agent", "security scanner", "prompt injection", "supply chain", "toolchain security", "SKILL.md", "agent skills"],
