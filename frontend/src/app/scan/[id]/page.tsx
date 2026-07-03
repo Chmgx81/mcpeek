@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import {
   ArrowLeft, Clock, FileText, Link2, Package, Loader2, AlertTriangle,
-  Shield, Globe, Lock, Swords, ChevronDown, ChevronUp, FileJson, FileCode, Share2, Check, RefreshCw, AlertOctagon,
+  Shield, Globe, Lock, Swords, ChevronDown, ChevronUp, FileJson, FileCode, Share2, Check, RefreshCw, AlertOctagon, Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import RiskScore from "@/components/RiskScore";
 import FindingCard from "@/components/FindingCard";
 import SeverityBadge from "@/components/SeverityBadge";
 import Logo from "@/components/Logo";
-import { fetchScan, fetchFullReport, rescanScan, fetchContentChanges, type ContentChange } from "@/lib/api";
+import { fetchScan, fetchFullReport, rescanScan, fetchContentChanges, deleteScan, type ContentChange } from "@/lib/api";
 import type { ScanResponse, FullReport, AttackScenario } from "@/lib/types";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -57,6 +57,7 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   const [showExec, setShowExec] = useState(false);
   const [copied, setCopied] = useState(false);
   const [rescanning, setRescanning] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [contentChanges, setContentChanges] = useState<ContentChange[] | null>(null);
 
   useEffect(() => {
@@ -102,6 +103,17 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
       setRescanning(false);
     } catch {
       setRescanning(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Delete this scan? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await deleteScan(id);
+      window.location.href = "/history";
+    } catch {
+      setDeleting(false);
     }
   };
 
@@ -224,6 +236,19 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
                   {rescanning ? "Re-scanning..." : "Re-scan"}
                 </button>
               )}
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
+                style={{
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  color: deleting ? "#ef4444" : "#737373",
+                  borderRadius: "3px",
+                }}
+              >
+                {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
             </div>
           </div>
         </div>

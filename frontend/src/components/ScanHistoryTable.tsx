@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Trash2 } from "lucide-react";
 import type { ScanResponse } from "@/lib/types";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -26,7 +26,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   running: { bg: "rgba(59,130,246,0.1)", text: "#3b82f6" },
 };
 
-export default function ScanHistoryTable({ scans, loading }: { scans: ScanResponse[]; loading: boolean }) {
+export default function ScanHistoryTable({ scans, loading, onDelete, deletingId }: { scans: ScanResponse[]; loading: boolean; onDelete?: (id: string) => void; deletingId?: string | null }) {
   const router = useRouter();
 
   if (loading) {
@@ -75,7 +75,7 @@ export default function ScanHistoryTable({ scans, loading }: { scans: ScanRespon
             <th className="px-3 py-2 text-left text-[11px] font-medium" style={{ color: "#525252" }}>Risk</th>
             <th className="px-3 py-2 text-left text-[11px] font-medium" style={{ color: "#525252" }}>Status</th>
             <th className="px-3 py-2 text-left text-[11px] font-medium hidden sm:table-cell" style={{ color: "#525252" }}>Date</th>
-            <th className="px-3 py-2 w-6" />
+            <th className="px-3 py-2 w-8" />
           </tr>
         </thead>
         <tbody>
@@ -122,7 +122,22 @@ export default function ScanHistoryTable({ scans, loading }: { scans: ScanRespon
                   {new Date(scan.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-3 py-2">
-                  <ArrowRight className="h-3 w-3" style={{ color: "#404040" }} />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onDelete) onDelete(scan.scan_id);
+                    }}
+                    disabled={deletingId === scan.scan_id}
+                    className="p-1 transition-colors disabled:opacity-50"
+                    style={{ color: deletingId === scan.scan_id ? "#ef4444" : "#404040" }}
+                    title="Delete scan"
+                  >
+                    {deletingId === scan.scan_id ? (
+                      <span className="h-3 w-3 block animate-spin" style={{ borderTop: "2px solid #ef4444", borderRight: "2px solid transparent", borderRadius: "50%" }} />
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
+                  </button>
                 </td>
               </tr>
             );

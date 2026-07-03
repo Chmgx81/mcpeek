@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, History } from "lucide-react";
 import ScanHistoryTable from "@/components/ScanHistoryTable";
-import { fetchScans } from "@/lib/api";
+import { fetchScans, deleteScan } from "@/lib/api";
 import type { ScanResponse } from "@/lib/types";
 
 export default function HistoryPage() {
@@ -12,13 +12,29 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
     fetchScans(page, 20)
       .then((r) => { setScans(r.scans); setPages(r.pages ?? 1); setLoading(false); })
       .catch(() => setLoading(false));
   }, [page]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this scan? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await deleteScan(id);
+      setScans((prev) => prev.filter((s) => s.scan_id !== id));
+    } catch {
+      // ignore
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="px-5 py-6 md:px-8">
@@ -37,7 +53,7 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        <ScanHistoryTable scans={scans} loading={loading} />
+        <ScanHistoryTable scans={scans} loading={loading} onDelete={handleDelete} deletingId={deletingId} />
 
         {pages > 1 && (
           <div className="flex items-center justify-center gap-3">

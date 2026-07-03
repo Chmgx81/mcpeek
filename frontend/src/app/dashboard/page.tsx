@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { TrendingUp, AlertTriangle, Clock } from "lucide-react";
 import ScanForm from "@/components/ScanForm";
 import ScanHistoryTable from "@/components/ScanHistoryTable";
 import OnboardingTour from "@/components/OnboardingTour";
-import { fetchStats, fetchScans } from "@/lib/api";
+import { fetchStats, fetchScans, deleteScan } from "@/lib/api";
 import type { StatsResponse, ScanResponse } from "@/lib/types";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [recentScans, setRecentScans] = useState<ScanResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     Promise.all([
       fetchStats().catch(() => null),
       fetchScans(1, 5).catch(() => ({ scans: [], total: 0, page: 1, limit: 5, pages: 0 })),
@@ -23,6 +24,22 @@ export default function DashboardPage() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this scan? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await deleteScan(id);
+      setRecentScans((prev) => prev.filter((s) => s.scan_id !== id));
+      setStats((prev) => prev ? { ...prev, total_scans: Math.max(0, prev.total_scans - 1) } : prev);
+    } catch {
+      // ignore
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="px-5 py-6 md:px-8">
@@ -59,7 +76,7 @@ export default function DashboardPage() {
 
         <div>
           <p className="text-[10px] font-medium uppercase tracking-widest mb-2" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Recent Scans</p>
-          <ScanHistoryTable scans={recentScans} loading={loading} />
+          <ScanHistoryTable scans={recentScans} loading={loading} onDelete={handleDelete} deletingId={deletingId} />
         </div>
       </div>
     </div>

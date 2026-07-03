@@ -79,3 +79,7 @@ export interface ContentChangesResponse {
 export function fetchContentChanges(id: string): Promise<ContentChangesResponse> {
   return request(`/scan/${id}/changes`);
 }
+
+export function deleteScan(id: string): Promise<{ deleted: boolean; scan_id: string }> {
+  return request(`/scan/${id}`, { method: "DELETE" });
+}
