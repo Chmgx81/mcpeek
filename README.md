@@ -200,7 +200,6 @@ mcpeek/
 │   │   │   ├── advanced_injection.py# Advanced prompt injection detection
 │   │   │   ├── external_analyzer.py # External URL analysis + code scanning
 │   │   │   ├── risk_scorer.py       # Risk score calculation
-│   │   │   ├── secret_detector.py   # Secret detection (legacy)
 │   │   │   └── report_generator.py  # Report generation
 │   │   └── static_scan/             # CLI static analysis pipeline
 │   │       ├── __main__.py          # CLI entry point (--fail-on)

@@ -12,6 +12,9 @@ import logging
 from urllib.parse import urlparse
 
 import httpx
+from httpx import URL
+
+from .url_safety import is_safe_public_url
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +42,15 @@ async def hash_external_urls(
     ) as client:
         for url in urls[:20]:
             parsed = urlparse(url)
-            if parsed.scheme not in ("http", "https"):
+            if parsed.scheme not in ("http", "https") or not is_safe_public_url(url):
                 continue
             try:
-                resp = await client.get(url)
+                resp = await client.get(url, follow_redirects=False)
+                if 300 <= resp.status_code < 400 and "location" in resp.headers:
+                    redirected = str(URL(url).join(resp.headers["location"]))
+                    if not is_safe_public_url(redirected):
+                        continue
+                    resp = await client.get(redirected, follow_redirects=False)
                 resp.raise_for_status()
                 # Hash the raw bytes (not decoded) to catch encoding tricks
                 raw = resp.content[:1_000_000]

@@ -2,10 +2,11 @@ import re
 from urllib.parse import urlparse
 
 import httpx
+from httpx import URL
 
 from ..schemas import FindingCreate
 from .ast_analyzer import analyze_js_patterns
-from .content_hash import compute_content_hash
+from .url_safety import is_safe_public_url
 
 SUSPICIOUS_CONTENT_TYPES = {"application/x-executable", "application/x-msdownload", "application/x-sh"}
 SUSPICIOUS_EXTENSIONS = {".exe", ".bat", ".cmd", ".ps1", ".sh", ".dll", ".so", ".dylib"}
@@ -24,13 +25,31 @@ async def analyze_urls(urls: list[str], timeout: int = 15) -> list[FindingCreate
             checked += 1
             try:
                 parsed = urlparse(url)
-                if parsed.scheme not in ("http", "https"):
+                if parsed.scheme not in ("http", "https") or not is_safe_public_url(url):
                     continue
 
-                resp = await client.get(url, follow_redirects=True)
+                resp = await client.get(url, follow_redirects=False)
                 final_url = str(resp.url)
 
                 # Check redirects
+                if 300 <= resp.status_code < 400 and "location" in resp.headers:
+                    final_url = str(URL(url).join(resp.headers["location"]))
+                    if not is_safe_public_url(final_url):
+                        findings.append(
+                            FindingCreate(
+                                category="external_resources",
+                                severity="high",
+                                title=f"Unsafe redirect blocked: {url}",
+                                description="External URL redirects to a private, reserved, or otherwise blocked network target.",
+                                evidence=f"Original: {url}\nRedirected to: {final_url}",
+                                remediation="Remove redirects to internal or private network resources.",
+                                cwe="CWE-918",
+                                references=[],
+                            )
+                        )
+                        continue
+                    resp = await client.get(final_url, follow_redirects=False)
+
                 if final_url.rstrip("/") != url.rstrip("/"):
                     final_parsed = urlparse(final_url)
                     orig_parsed = urlparse(url)

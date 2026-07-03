@@ -84,6 +84,7 @@ class ScanResponse(BaseModel):
     created_at: str | None = None
     error_message: str | None = None
     content_changed: bool = False
+    rescan_of: str | None = None
 
 
 class ReportResponse(BaseModel):

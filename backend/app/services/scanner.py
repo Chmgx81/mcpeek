@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Finding, Scan
 from ..schemas import FindingCreate, ScanRequest, TargetType
-from .content_hash import compare_hashes, hashes_from_json
+from .content_hash import compare_hashes, hash_external_urls, hashes_from_json
 from .mcp_scanner import scan_mcp_server
 from .package_scanner import scan_package
 from .risk_scorer import build_summary, calculate_risk
@@ -29,6 +29,59 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
         # Run appropriate scanner
         all_findings: list[FindingCreate] = []
         metadata: dict = {"files_analyzed": 0, "urls_checked": 0, "deps_analyzed": 0}
+        content_hashes: dict[str, str] = {}
+
+        # Inline pasted scans do not store the original content. For re-scans,
+        # re-hash the URLs captured in the previous scan instead of pretending
+        # the sentinel target is a real local path.
+        if request.rescan_of and request.target == "__inline_config__" and not request.options.inline_content:
+            prev_result = await db.execute(select(Scan).where(Scan.id == request.rescan_of))
+            prev_scan = prev_result.scalar_one_or_none()
+            old_hashes = hashes_from_json(prev_scan.content_hashes_json if prev_scan else "{}")
+            if old_hashes:
+                content_hashes = await hash_external_urls(list(old_hashes), timeout=min(request.options.timeout, 10))
+                metadata["urls_checked"] = len(old_hashes)
+                _append_hash_change_findings(all_findings, old_hashes, content_hashes)
+            else:
+                all_findings.append(FindingCreate(
+                    category="supply_chain",
+                    severity="info",
+                    title="No external URL hashes available for re-scan",
+                    description="The previous scan did not capture external URL content hashes, so there is no mutable remote payload to compare.",
+                    remediation="Run deep scan on content that references external URLs to enable bait-and-switch detection.",
+                ))
+
+            overall_risk, risk_level = calculate_risk(all_findings)
+            summary = build_summary(all_findings)
+            duration_ms = int((time.monotonic() - start) * 1000)
+
+            for f in all_findings:
+                db.add(Finding(
+                    scan_id=scan_id,
+                    category=f.category,
+                    severity=f.severity,
+                    title=f.title,
+                    description=f.description,
+                    evidence=f.evidence,
+                    remediation=f.remediation,
+                    cwe=f.cwe,
+                    owasp=f.owasp,
+                    references_json=json.dumps(f.references),
+                ))
+
+            from .content_hash import hashes_to_json
+            scan.status = "completed"
+            scan.overall_risk = overall_risk
+            scan.risk_level = risk_level
+            scan.summary_json = json.dumps(summary)
+            scan.scan_duration_ms = duration_ms
+            scan.files_analyzed = 0
+            scan.urls_checked = metadata.get("urls_checked", 0)
+            scan.deps_analyzed = 0
+            scan.content_hashes_json = hashes_to_json(content_hashes) if content_hashes else "{}"
+            scan.rescan_of = request.rescan_of
+            await db.commit()
+            return
 
         if request.target_type == TargetType.MCP_SERVER:
             findings, meta = await scan_mcp_server(
@@ -63,22 +116,8 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
             prev_scan = prev_result.scalar_one_or_none()
             if prev_scan:
                 old_hashes = hashes_from_json(prev_scan.content_hashes_json or "{}")
-                changes = compare_hashes(old_hashes, content_hashes)
+                changes = _append_hash_change_findings(all_findings, old_hashes, content_hashes)
                 if changes:
-                    for change in changes:
-                        sev = "critical" if change["status"] == "changed" else "high"
-                        all_findings.append(FindingCreate(
-                            category="supply_chain",
-                            severity=sev,
-                            title=f"External URL content changed: {change['status']}",
-                            description=(
-                                f"URL {change['url']} has {change['status']} since the previous scan. "
-                                f"This is a strong indicator of a bait-and-switch attack."
-                            ),
-                            evidence=f"URL: {change['url']}\nStatus: {change['status']}\nOld hash: {change.get('old_hash', 'N/A')[:16]}...\nNew hash: {change.get('new_hash', 'N/A')[:16]}...",
-                            remediation="Review the URL content immediately. If this skill was approved, revoke access.",
-                            cwe="CWE-345",
-                        ))
                     # Escalate risk if content changed
                     metadata["content_changed"] = True
                     metadata["changed_urls"] = [c["url"] for c in changes]
@@ -142,3 +181,29 @@ def _merge_metadata(target: dict, source: dict) -> None:
         target["content_hashes"] = source["content_hashes"]
     if "dependency_risk_score" in source:
         target["dependency_risk_score"] = source["dependency_risk_score"]
+
+
+def _append_hash_change_findings(
+    findings: list[FindingCreate], old_hashes: dict[str, str], new_hashes: dict[str, str]
+) -> list[dict]:
+    changes = compare_hashes(old_hashes, new_hashes)
+    for change in changes:
+        sev = "critical" if change["status"] == "changed" else "high"
+        old_hash = change.get("old_hash") or "N/A"
+        new_hash = change.get("new_hash") or "N/A"
+        findings.append(FindingCreate(
+            category="supply_chain",
+            severity=sev,
+            title=f"External URL content changed: {change['status']}",
+            description=(
+                f"URL {change['url']} has {change['status']} since the previous scan. "
+                "This is a strong indicator of a bait-and-switch attack."
+            ),
+            evidence=(
+                f"URL: {change['url']}\nStatus: {change['status']}\n"
+                f"Old hash: {old_hash[:16]}...\nNew hash: {new_hash[:16]}..."
+            ),
+            remediation="Review the URL content immediately. If this skill was approved, revoke access.",
+            cwe="CWE-345",
+        ))
+    return changes

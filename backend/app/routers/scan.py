@@ -1,6 +1,4 @@
 import json
-import ipaddress
-import socket
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -22,6 +20,8 @@ from ..schemas import (
     StatsResponse,
 )
 from ..services.scanner import run_scan
+from ..services.content_hash import compare_hashes, hashes_from_json
+from ..services.url_safety import is_blocked_host
 
 router = APIRouter(prefix="/api/v1")
 limiter = Limiter(key_func=get_remote_address)
@@ -30,40 +30,6 @@ limiter = Limiter(key_func=get_remote_address)
 # ---------------------------------------------------------------------------
 # URL validation (SSRF protection)
 # ---------------------------------------------------------------------------
-
-_BLOCKED_NETWORKS = [
-    ipaddress.ip_network("10.0.0.0/8"),
-    ipaddress.ip_network("172.16.0.0/12"),
-    ipaddress.ip_network("192.168.0.0/16"),
-    ipaddress.ip_network("127.0.0.0/8"),
-    ipaddress.ip_network("169.254.0.0/16"),
-    ipaddress.ip_network("0.0.0.0/8"),
-    ipaddress.ip_network("100.64.0.0/10"),
-    ipaddress.ip_network("192.0.0.0/24"),
-    ipaddress.ip_network("192.0.2.0/24"),
-    ipaddress.ip_network("198.18.0.0/15"),
-    ipaddress.ip_network("198.51.100.0/24"),
-    ipaddress.ip_network("203.0.113.0/24"),
-    ipaddress.ip_network("224.0.0.0/4"),
-    ipaddress.ip_network("240.0.0.0/4"),
-    ipaddress.ip_network("::1/128"),
-    ipaddress.ip_network("fc00::/7"),
-    ipaddress.ip_network("fe80::/10"),
-]
-
-
-def _is_blocked_host(hostname: str) -> bool:
-    try:
-        addresses = [ipaddress.ip_address(hostname)]
-    except ValueError:
-        try:
-            infos = socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
-        except socket.gaierror:
-            raise HTTPException(status_code=400, detail="Invalid URL: hostname cannot be resolved")
-        addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
-
-    return any(any(ip in net for net in _BLOCKED_NETWORKS) for ip in addresses)
-
 
 def _validate_target(target: str, target_type: str) -> None:
     """Validate scan target to prevent SSRF and other abuses."""
@@ -85,7 +51,7 @@ def _validate_target(target: str, target_type: str) -> None:
         hostname = parsed.hostname
         if not hostname:
             raise HTTPException(status_code=400, detail="Invalid URL: no hostname")
-        if not settings.ALLOW_PRIVATE_NETWORK_SCANS and _is_blocked_host(hostname):
+        if not settings.ALLOW_PRIVATE_NETWORK_SCANS and is_blocked_host(hostname):
             raise HTTPException(
                 status_code=400,
                 detail=f"Scanning private/reserved network targets is not allowed: {hostname}",
@@ -146,6 +112,14 @@ def _meta(scan: Scan) -> dict:
     }
 
 
+def _content_changed(scan: Scan, previous_scan: Scan | None) -> bool:
+    if not scan.rescan_of or previous_scan is None:
+        return False
+    old_hashes = hashes_from_json(previous_scan.content_hashes_json or "{}")
+    new_hashes = hashes_from_json(scan.content_hashes_json or "{}")
+    return bool(compare_hashes(old_hashes, new_hashes))
+
+
 # ---------------------------------------------------------------------------
 # Submit scan
 # ---------------------------------------------------------------------------
@@ -195,6 +169,11 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
     )
     findings = findings_result.scalars().all()
 
+    previous_scan = None
+    if scan.rescan_of:
+        previous_result = await db.execute(select(Scan).where(Scan.id == scan.rescan_of))
+        previous_scan = previous_result.scalar_one_or_none()
+
     return ScanResponse(
         scan_id=scan.id,
         status=scan.status,
@@ -207,7 +186,8 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
         metadata=_meta(scan),
         created_at=scan.created_at.isoformat() if scan.created_at else None,
         error_message=scan.error_message,
-        content_changed=scan.content_hashes_json != "{}" and scan.rescan_of is not None,
+        content_changed=_content_changed(scan, previous_scan),
+        rescan_of=scan.rescan_of,
     )
 
 
@@ -270,7 +250,6 @@ async def get_content_changes(scan_id: str, db: AsyncSession = Depends(get_db)):
     if not scan.rescan_of:
         raise HTTPException(status_code=400, detail="This scan is not a re-scan")
 
-    from ..services.content_hash import compare_hashes, hashes_from_json
     new_hashes = hashes_from_json(scan.content_hashes_json or "{}")
 
     prev_result = await db.execute(select(Scan).where(Scan.id == scan.rescan_of))
