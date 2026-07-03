@@ -33,6 +33,7 @@ class Scan(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_hashes_json: Mapped[str] = mapped_column(Text, default="{}")
     rescan_of: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    inline_content: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     findings: Mapped[list["Finding"]] = relationship(back_populates="scan", lazy="selectin")
 

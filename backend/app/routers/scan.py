@@ -137,6 +137,7 @@ async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks:
         target=scan_req.target,
         target_type=scan_req.target_type.value,
         status="pending",
+        inline_content=scan_req.options.inline_content if scan_req.options else None,
     )
     db.add(scan)
     await db.commit()
@@ -233,7 +234,7 @@ async def rescan_scan(
     new_req = ScanRequest(
         target_type=prev_scan.target_type,
         target=prev_scan.target,
-        options=ScanOptions(deep=True),
+        options=ScanOptions(deep=True, inline_content=prev_scan.inline_content),
         rescan_of=scan_id,
     )
 
