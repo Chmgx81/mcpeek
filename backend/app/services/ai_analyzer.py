@@ -35,62 +35,33 @@ DEFAULT_MODEL = FREE_MODELS[0]
 
 def _build_attack_prompt(findings: list[dict], target: str, target_type: str) -> str:
     findings_text = "\n".join(
-        f"- [{f['severity'].upper()}] {f['title']}: {f['description']}"
-        for f in findings[:20]
+        f"- [{f['severity'].upper()}] {f['title']}: {f['description'][:200]}"
+        for f in findings[:10]
     )
-    return f"""You are a cybersecurity expert analyzing an MCP (Model Context Protocol) configuration.
+    return f"""Analyze these MCP security findings and generate 2 attack scenarios.
 
-Target: {target}
-Type: {target_type}
-
-Findings from automated scan:
+Findings:
 {findings_text}
 
-Based on these findings, generate 2-3 realistic attack scenarios. For each scenario:
-1. A short title
-2. The attack vector (how an attacker would exploit this)
-3. The impact (what data/systems are at risk)
-4. A concrete step-by-step exploitation path
+For each scenario return JSON with: title, vector, impact, steps (array of 2-3 strings), severity, related_finding.
 
-Be specific to THIS configuration. Reference the actual findings. Do not use generic templates.
-
-Return ONLY valid JSON array with this structure:
-[
-  {{
-    "title": "Attack scenario title",
-    "vector": "How the attack works",
-    "impact": "What gets compromised",
-    "steps": ["Step 1", "Step 2", "Step 3"],
-    "severity": "critical|high|medium",
-    "related_finding": "title of the finding it relates to"
-  }}
-]"""
+Return ONLY a JSON array, no other text:
+[{{"title":"...","vector":"...","impact":"...","steps":["...","..."],"severity":"critical","related_finding":"..."}}]"""
 
 
 def _build_remediation_prompt(findings: list[dict], target_type: str) -> str:
     findings_text = "\n".join(
-        f"- [{f['severity'].upper()}] {f['title']}: {f.get('remediation', 'No remediation provided')}"
-        for f in findings[:20]
+        f"- [{f['severity'].upper()}] {f['title']}"
+        for f in findings[:10]
     )
-    return f"""You are a security engineer providing remediation for MCP configuration issues.
+    return f"""Provide specific fixes for these MCP security findings:
 
-Findings and current remediation suggestions:
 {findings_text}
 
-For each finding, provide a SPECIFIC, actionable fix. Include:
-1. The exact config change needed (JSON snippet or code)
-2. Why this fix works
-3. Any trade-offs or things to watch out for
+For each finding return JSON with: finding_title, fix (exact config change), explanation, tradeoffs.
 
-Return ONLY valid JSON array:
-[
-  {{
-    "finding_title": "Title of the finding being addressed",
-    "fix": "Exact config/code change (JSON snippet or description)",
-    "explanation": "Why this works",
-    "tradeoffs": "What to watch out for (or 'None')"
-  }}
-]"""
+Return ONLY a JSON array, no other text:
+[{{"finding_title":"...","fix":"...","explanation":"...","tradeoffs":"..."}}]"""
 
 
 def _build_narrative_prompt(findings: list[dict], risk_score: int, trust_score: int, target: str) -> str:
@@ -124,26 +95,16 @@ Return ONLY valid JSON:
 
 def _build_threat_intel_prompt(findings: list[dict]) -> str:
     categories = list(set(f.get("category", "") for f in findings))
-    return f"""You are a threat intelligence analyst mapping MCP security findings to real-world threats.
+    return f"""Map these MCP security finding categories to MITRE ATT&CK techniques.
 
-Finding categories detected: {', '.join(categories)}
+Categories: {', '.join(categories)}
 
-For each category, provide:
-1. Relevant CVE IDs (if any match this type of vulnerability)
-2. Known attack campaigns that use this technique
-3. MITRE ATT&CK techniques that apply
+For each category return JSON with: category, cves (array), campaigns (array), mitre_techniques (array like "T1059: Command and Scripting Interpreter").
 
-Return ONLY valid JSON array:
-[
-  {{
-    "category": "finding category",
-    "cves": ["CVE-XXXX-XXXXX"],
-    "campaigns": ["Campaign name and brief description"],
-    "mitre_techniques": ["T1XXX: Technique name"]
-  }}
-]
+Return ONLY a JSON array, no other text:
+[{{"category":"...","cves":[],"campaigns":[],"mitre_techniques":["T1059:..."]}}]
 
-If no specific CVE matches, return an empty array for that field. Be accurate — only cite real CVEs and techniques."""
+Only include real MITRE technique IDs. If unknown, use empty arrays."""
 
 
 async def _call_openrouter(
@@ -231,7 +192,9 @@ async def generate_attack_scenarios(
     raw = await _call_openrouter(prompt, api_key, model)
     result = _parse_json_response(raw)
     if isinstance(result, list):
+        logger.info("Generated %d attack scenarios", len(result))
         return result[:5]
+    logger.warning("Failed to parse attack scenarios from LLM response")
     return []
 
 
@@ -246,7 +209,9 @@ async def generate_remediation(
     raw = await _call_openrouter(prompt, api_key, model)
     result = _parse_json_response(raw)
     if isinstance(result, list):
+        logger.info("Generated %d remediation items", len(result))
         return result[:10]
+    logger.warning("Failed to parse remediation from LLM response")
     return []
 
 
@@ -263,7 +228,9 @@ async def generate_risk_narrative(
     raw = await _call_openrouter(prompt, api_key, model)
     result = _parse_json_response(raw)
     if isinstance(result, dict) and "summary" in result:
+        logger.info("Generated risk narrative with verdict: %s", result.get("verdict"))
         return result
+    logger.warning("Failed to parse risk narrative from LLM response")
     return {"summary": "", "verdict": "unknown", "confidence": "low"}
 
 
