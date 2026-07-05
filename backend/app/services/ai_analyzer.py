@@ -283,7 +283,7 @@ async def run_ai_analysis(
 
         result = {}
 
-        # Run each analysis with individual timeout (sequential to avoid Railway timeout issues)
+        # Run each analysis with individual timeout and delay between calls to avoid rate limits
         try:
             scenarios = await asyncio.wait_for(
                 generate_attack_scenarios(findings, target, target_type, api_key, model),
@@ -293,6 +293,8 @@ async def run_ai_analysis(
                 result["ai_attack_scenarios"] = scenarios
         except (asyncio.TimeoutError, Exception):
             logger.warning("Attack scenarios generation failed or timed out")
+
+        await asyncio.sleep(2)  # Rate limit delay
 
         try:
             remediation = await asyncio.wait_for(
@@ -304,6 +306,8 @@ async def run_ai_analysis(
         except (asyncio.TimeoutError, Exception):
             logger.warning("Remediation generation failed or timed out")
 
+        await asyncio.sleep(2)  # Rate limit delay
+
         try:
             narrative = await asyncio.wait_for(
                 generate_risk_narrative(findings, risk_score, trust_score, target, api_key, model),
@@ -313,6 +317,8 @@ async def run_ai_analysis(
                 result["ai_narrative"] = narrative
         except (asyncio.TimeoutError, Exception):
             logger.warning("Narrative generation failed or timed out")
+
+        await asyncio.sleep(2)  # Rate limit delay
 
         try:
             threat_intel = await asyncio.wait_for(
