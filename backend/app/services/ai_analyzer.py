@@ -279,28 +279,50 @@ async def run_ai_analysis(
         return {}
 
     try:
-        # Run all analyses concurrently with timeout
         import asyncio
-        scenarios, remediation, narrative, threat_intel = await asyncio.wait_for(
-            asyncio.gather(
-                generate_attack_scenarios(findings, target, target_type, api_key, model),
-                generate_remediation(findings, target_type, api_key, model),
-                generate_risk_narrative(findings, risk_score, trust_score, target, api_key, model),
-                generate_threat_intel(findings, api_key, model),
-                return_exceptions=True,
-            ),
-            timeout=120,
-        )
 
         result = {}
-        if isinstance(scenarios, list):
-            result["ai_attack_scenarios"] = scenarios
-        if isinstance(remediation, list):
-            result["ai_remediation"] = remediation
-        if isinstance(narrative, dict):
-            result["ai_narrative"] = narrative
-        if isinstance(threat_intel, list):
-            result["ai_threat_intel"] = threat_intel
+
+        # Run each analysis with individual timeout (sequential to avoid Railway timeout issues)
+        try:
+            scenarios = await asyncio.wait_for(
+                generate_attack_scenarios(findings, target, target_type, api_key, model),
+                timeout=60,
+            )
+            if isinstance(scenarios, list):
+                result["ai_attack_scenarios"] = scenarios
+        except (asyncio.TimeoutError, Exception):
+            logger.warning("Attack scenarios generation failed or timed out")
+
+        try:
+            remediation = await asyncio.wait_for(
+                generate_remediation(findings, target_type, api_key, model),
+                timeout=60,
+            )
+            if isinstance(remediation, list):
+                result["ai_remediation"] = remediation
+        except (asyncio.TimeoutError, Exception):
+            logger.warning("Remediation generation failed or timed out")
+
+        try:
+            narrative = await asyncio.wait_for(
+                generate_risk_narrative(findings, risk_score, trust_score, target, api_key, model),
+                timeout=60,
+            )
+            if isinstance(narrative, dict):
+                result["ai_narrative"] = narrative
+        except (asyncio.TimeoutError, Exception):
+            logger.warning("Narrative generation failed or timed out")
+
+        try:
+            threat_intel = await asyncio.wait_for(
+                generate_threat_intel(findings, api_key, model),
+                timeout=60,
+            )
+            if isinstance(threat_intel, list):
+                result["ai_threat_intel"] = threat_intel
+        except (asyncio.TimeoutError, Exception):
+            logger.warning("Threat intel generation failed or timed out")
 
         return result
     except Exception:
