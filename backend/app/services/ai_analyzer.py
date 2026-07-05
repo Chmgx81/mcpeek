@@ -111,7 +111,7 @@ async def _call_openrouter(
     prompt: str,
     api_key: str,
     model: str = DEFAULT_MODEL,
-    max_tokens: int = 1024,
+    max_tokens: int = 1500,
 ) -> str | None:
     """Call OpenRouter API and return the response text."""
     headers = {
@@ -128,7 +128,7 @@ async def _call_openrouter(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(OPENROUTER_URL, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()
