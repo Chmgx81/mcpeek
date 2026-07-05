@@ -44,7 +44,7 @@ MCPeek analyzes the full attack surface of MCP configurations: shell execution p
 ## Demo
 
 <p align="center">
-  <a href="https://youtu.be/mQXrpGpstA8">
+  <a href="https://youtu.be/mQXrpGpstA8?autoplay=1">
     <img src="https://img.youtube.com/vi/mQXrpGpstA8/0.jpg" alt="MCPeek Demo" width="600">
   </a>
 </p>
