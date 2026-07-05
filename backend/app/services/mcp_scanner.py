@@ -11,6 +11,7 @@ from .advanced_injection import detect_advanced_injection
 from .content_hash import hash_external_urls
 from .dependency_risk import analyze_domain_reputation, score_urls
 from .external_analyzer import analyze_urls
+from .tool_poison_detector import detect_tool_poisoning, detect_scope_creep, detect_intent_subversion, detect_context_oversharing
 
 SUSPICIOUS_URL_PATTERNS = [
     (r"(?i)eval\s*\(", "Code evaluation (eval)"),
@@ -195,6 +196,20 @@ def _check_mcp_config(manifest: dict | None, source: str) -> list[FindingCreate]
                                 cwe="CWE-78",
                             )
                         )
+
+            # OWASP MCP03: Tool poisoning — hidden instructions in tool descriptions
+            tools = server_config.get("tools", [])
+            if isinstance(tools, list):
+                findings.extend(detect_tool_poisoning(tools, server_name))
+                findings.extend(detect_scope_creep(tools, server_name))
+
+            # OWASP MCP06: Intent flow subversion — in instructions
+            if isinstance(instructions, str) and instructions:
+                findings.extend(detect_intent_subversion(instructions, f"MCP server '{server_name}'"))
+
+            # OWASP MCP10: Context over-sharing
+            if isinstance(instructions, str) and instructions:
+                findings.extend(detect_context_oversharing(instructions, f"MCP server '{server_name}'"))
 
     return findings
 

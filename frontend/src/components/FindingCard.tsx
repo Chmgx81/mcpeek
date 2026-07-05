@@ -27,6 +27,10 @@ const CAT_LABELS: Record<string, string> = {
   package: "Package",
   code_execution: "Code Execution",
   obfuscation: "Obfuscation",
+  tool_poisoning: "Tool Poisoning",
+  scope_creep: "Scope Creep",
+  intent_subversion: "Intent Subversion",
+  context_oversharing: "Context Over-Sharing",
 };
 
 export default function FindingCard({ finding }: { finding: Finding }) {

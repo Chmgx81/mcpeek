@@ -151,10 +151,10 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   const high = scan.summary.high;
 
   const runtimeRisks = scan.findings.filter((f) =>
-    ["execution", "code_execution", "exfiltration", "manifest"].includes(f.category)
+    ["execution", "code_execution", "exfiltration", "manifest", "tool_poisoning"].includes(f.category)
   ).length;
   const trustRisks = scan.findings.filter((f) =>
-    ["supply_chain", "permissions", "social_engineering"].includes(f.category)
+    ["supply_chain", "permissions", "social_engineering", "scope_creep", "intent_subversion", "context_oversharing"].includes(f.category)
   ).length;
 
   const trustScore = report?.json?.scores?.trust_score?.value ?? Math.max(0, 100 - trustRisks * 12 - runtimeRisks * 8);
