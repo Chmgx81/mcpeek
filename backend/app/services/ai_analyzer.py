@@ -135,6 +135,9 @@ async def _call_openrouter(
             resp = await client.post(OPENROUTER_URL, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()
+            if "choices" not in data or not data["choices"]:
+                logger.warning("OpenRouter response missing choices: %s", str(data)[:300])
+                return None
             return data["choices"][0]["message"]["content"]
     except httpx.TimeoutException:
         logger.warning("OpenRouter timeout for model %s", model)
@@ -294,7 +297,7 @@ async def run_ai_analysis(
         except (asyncio.TimeoutError, Exception):
             logger.warning("Attack scenarios generation failed or timed out")
 
-        await asyncio.sleep(2)  # Rate limit delay
+        await asyncio.sleep(6)  # Rate limit delay
 
         try:
             remediation = await asyncio.wait_for(
@@ -306,7 +309,7 @@ async def run_ai_analysis(
         except (asyncio.TimeoutError, Exception):
             logger.warning("Remediation generation failed or timed out")
 
-        await asyncio.sleep(2)  # Rate limit delay
+        await asyncio.sleep(6)  # Rate limit delay
 
         try:
             narrative = await asyncio.wait_for(
@@ -318,7 +321,7 @@ async def run_ai_analysis(
         except (asyncio.TimeoutError, Exception):
             logger.warning("Narrative generation failed or timed out")
 
-        await asyncio.sleep(2)  # Rate limit delay
+        await asyncio.sleep(6)  # Rate limit delay
 
         try:
             threat_intel = await asyncio.wait_for(
