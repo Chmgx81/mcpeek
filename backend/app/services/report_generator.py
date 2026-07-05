@@ -73,9 +73,12 @@ def _compute_trust_score(findings: list[dict]) -> int:
     trust_cats = {
         "external_dependencies", "unpinned_packages",
         "suspicious_domain", "unofficial_source", "typosquatting",
+        "supply_chain", "permissions", "scope_creep",
     }
     runtime_cats = {
         "remote_code_execution", "exfiltration", "system_modification",
+        "execution", "code_execution", "tool_poisoning",
+        "intent_subversion", "context_oversharing",
     }
     trust_hits = sum(1 for f in findings if f.get("category") in trust_cats)
     runtime_hits = sum(1 for f in findings if f.get("category") in runtime_cats)

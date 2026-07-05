@@ -157,7 +157,7 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
     ["supply_chain", "permissions", "social_engineering", "scope_creep", "intent_subversion", "context_oversharing"].includes(f.category)
   ).length;
 
-  const trustScore = report?.json?.scores?.trust_score?.value ?? Math.max(0, 100 - trustRisks * 12 - runtimeRisks * 8);
+  const trustScore = report?.json?.scores?.trust_score?.value ?? Math.max(0, 100 - trustRisks * 15 - runtimeRisks * 10);
 
   const recommendations = report?.json?.recommendations?.length ? report.json.recommendations : (() => {
     const r: string[] = [];
