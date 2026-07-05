@@ -111,7 +111,7 @@ async def _call_openrouter(
     prompt: str,
     api_key: str,
     model: str = DEFAULT_MODEL,
-    max_tokens: int = 1500,
+    max_tokens: int = 4096,
 ) -> str | None:
     """Call OpenRouter API and return the response text."""
     headers = {
@@ -126,6 +126,9 @@ async def _call_openrouter(
         "max_tokens": max_tokens,
         "temperature": 0.3,
     }
+    # Disable reasoning/thinking for models that support it
+    if "gpt-oss" in model or "qwen3" in model:
+        payload["reasoning"] = {"exclude": True}
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
