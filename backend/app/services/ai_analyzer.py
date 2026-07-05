@@ -279,14 +279,17 @@ async def run_ai_analysis(
         return {}
 
     try:
-        # Run all analyses concurrently
+        # Run all analyses concurrently with timeout
         import asyncio
-        scenarios, remediation, narrative, threat_intel = await asyncio.gather(
-            generate_attack_scenarios(findings, target, target_type, api_key, model),
-            generate_remediation(findings, target_type, api_key, model),
-            generate_risk_narrative(findings, risk_score, trust_score, target, api_key, model),
-            generate_threat_intel(findings, api_key, model),
-            return_exceptions=True,
+        scenarios, remediation, narrative, threat_intel = await asyncio.wait_for(
+            asyncio.gather(
+                generate_attack_scenarios(findings, target, target_type, api_key, model),
+                generate_remediation(findings, target_type, api_key, model),
+                generate_risk_narrative(findings, risk_score, trust_score, target, api_key, model),
+                generate_threat_intel(findings, api_key, model),
+                return_exceptions=True,
+            ),
+            timeout=120,
         )
 
         result = {}
