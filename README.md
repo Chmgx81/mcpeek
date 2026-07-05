@@ -43,10 +43,9 @@ MCPeek analyzes the full attack surface of MCP configurations: shell execution p
 
 ## Demo
 
-<!-- Replace VIDEO_URL with your YouTube/Loom/Vimeo embed URL -->
 <p align="center">
-  <a href="VIDEO_URL">
-    <img src="https://img.youtube.com/vi/VIDEO_ID/0.jpg" alt="MCPeek Demo" width="600">
+  <a href="https://youtu.be/mQXrpGpstA8">
+    <img src="https://img.youtube.com/vi/mQXrpGpstA8/0.jpg" alt="MCPeek Demo" width="600">
   </a>
 </p>
 
