@@ -281,7 +281,7 @@ function BentoFeatures() {
     },
     {
       title: "Attack Simulation",
-      desc: "Model real-world attack vectors against your MCP server configuration to find exploitable paths before adversaries do.",
+      desc: "Model real-world attack vectors and OWASP MCP Top 10 threats against your configuration to find exploitable paths before adversaries do.",
       icon: ShieldCheck,
       span: "col-span-1 md:col-span-2 row-span-1",
       accent: "#ef4444",
@@ -423,6 +423,9 @@ function ComparisonTable() {
     { name: "Trust score calculation", mcpeek: true, generic: false, traditional: false },
     { name: "Attack simulation", mcpeek: true, generic: false, traditional: false },
     { name: "Prompt injection detection", mcpeek: true, generic: true, traditional: false },
+    { name: "Tool poisoning detection (MCP03)", mcpeek: true, generic: false, traditional: false },
+    { name: "Scope creep detection (MCP02)", mcpeek: true, generic: false, traditional: false },
+    { name: "Intent subversion detection (MCP06)", mcpeek: true, generic: false, traditional: false },
     { name: "Supply chain analysis", mcpeek: true, generic: true, traditional: true },
     { name: "Open source / free", mcpeek: true, generic: true, traditional: false },
   ];

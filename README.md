@@ -43,6 +43,12 @@ Attackers host clean AI skills that pass automated scanners. After thousands of 
 - Environment variable exfiltration
 - Remote code execution vectors
 
+**OWASP MCP Top 10**
+- **MCP02: Scope Creep** — overly broad tool permissions (`full access`, `unrestricted database`)
+- **MCP03: Tool Poisoning** — hidden instructions in tool descriptions (data exfiltration, role override, covert channels, conditional triggers, obfuscation)
+- **MCP06: Intent Flow Subversion** — redirect instructions in context (`instead of user's goal`, `your new mission`)
+- **MCP10: Context Over-Sharing** — shared context spaces, bulk data access patterns
+
 **Bait-and-Switch Defense**
 - SHA-256 content hashing of external URLs
 - Re-scan with automatic payload change detection
@@ -62,6 +68,7 @@ Attackers host clean AI skills that pass automated scanners. After thousands of 
 
 **Attack Simulation**
 - Realistic attack scenarios for each finding category
+- OWASP MCP Top 10 mapping (MCP02, MCP03, MCP06, MCP10)
 - Executive summary with risk verdict (HIGH RISK / ELEVATED / MODERATE / LOW RISK)
 
 **Supported Targets**
