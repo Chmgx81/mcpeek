@@ -177,6 +177,12 @@ def _parse_json_response(text: str) -> Any:
                         return json.loads(text[start:i + 1])
                     except json.JSONDecodeError:
                         break
+    # Last resort: try to fix common issues (trailing commas, etc.)
+    cleaned = re.sub(r',\s*([\]}])', r'\1', text)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
     return None
 
 
@@ -190,11 +196,13 @@ async def generate_attack_scenarios(
     """Generate dynamic, context-specific attack scenarios."""
     prompt = _build_attack_prompt(findings, target, target_type)
     raw = await _call_openrouter(prompt, api_key, model)
+    if raw:
+        logger.debug("Attack scenarios raw response: %s", raw[:500])
     result = _parse_json_response(raw)
     if isinstance(result, list):
         logger.info("Generated %d attack scenarios", len(result))
         return result[:5]
-    logger.warning("Failed to parse attack scenarios from LLM response")
+    logger.warning("Failed to parse attack scenarios. Raw: %s", raw[:300] if raw else "None")
     return []
 
 
@@ -207,11 +215,13 @@ async def generate_remediation(
     """Generate specific remediation suggestions."""
     prompt = _build_remediation_prompt(findings, target_type)
     raw = await _call_openrouter(prompt, api_key, model)
+    if raw:
+        logger.debug("Remediation raw response: %s", raw[:500])
     result = _parse_json_response(raw)
     if isinstance(result, list):
         logger.info("Generated %d remediation items", len(result))
         return result[:10]
-    logger.warning("Failed to parse remediation from LLM response")
+    logger.warning("Failed to parse remediation. Raw: %s", raw[:300] if raw else "None")
     return []
 
 
