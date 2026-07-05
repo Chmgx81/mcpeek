@@ -252,9 +252,13 @@ async def generate_threat_intel(
     """Map findings to real-world CVEs and MITRE ATT&CK."""
     prompt = _build_threat_intel_prompt(findings)
     raw = await _call_openrouter(prompt, api_key, model)
+    if raw:
+        logger.debug("Threat intel raw response: %s", raw[:500])
     result = _parse_json_response(raw)
     if isinstance(result, list):
+        logger.info("Generated %d threat intel items", len(result))
         return result[:10]
+    logger.warning("Failed to parse threat intel. Raw: %s", raw[:300] if raw else "None")
     return []
 
 
