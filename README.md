@@ -61,15 +61,16 @@ Attackers host clean AI skills that pass automated scanners. After thousands of 
 - Obfuscation detection: hex strings, unicode escapes, chr() chains
 
 **Trust Scoring**
-- Repository metadata analysis (stars, contributors, commit activity)
+- Heuristic risk scoring based on dependency analysis
 - Domain reputation (Tier 1–4 classification, TLD risk)
-- Trust mismatch detection (high stars + suspicious domain = astroturfing)
 - Supply chain signals (typosquatting, mutable URLs)
 
-**Attack Simulation**
-- Realistic attack scenarios for each finding category
-- OWASP MCP Top 10 mapping (MCP02, MCP03, MCP06, MCP10)
-- Executive summary with risk verdict (HIGH RISK / ELEVATED / MODERATE / LOW RISK)
+**AI-Powered Analysis (Optional)**
+- Dynamic attack scenario generation via OpenRouter free models
+- AI-generated remediation suggestions with exact config fixes
+- Plain-English risk narrative for executive summaries
+- Threat intelligence mapping (CVEs, MITRE ATT&CK)
+- Requires free OpenRouter API key (no credit card needed)
 
 **Supported Targets**
 - MCP server configs (`package.json` MCP configs, `pyproject.toml`)

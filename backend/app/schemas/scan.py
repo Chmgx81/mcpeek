@@ -18,6 +18,8 @@ class ScanOptions(BaseModel):
     deep: bool = True
     timeout: int = Field(default=120, ge=1, le=120)
     inline_content: str | None = Field(default=None, max_length=settings.MAX_INLINE_CONTENT_BYTES)
+    ai_api_key: str | None = Field(default=None, max_length=200)
+    ai_model: str | None = Field(default=None, max_length=100)
 
     @field_validator("inline_content")
     @classmethod
@@ -85,6 +87,10 @@ class ScanResponse(BaseModel):
     error_message: str | None = None
     content_changed: bool = False
     rescan_of: str | None = None
+    ai_attack_scenarios: list[dict] = Field(default_factory=list)
+    ai_remediation: list[dict] = Field(default_factory=list)
+    ai_narrative: dict = Field(default_factory=dict)
+    ai_threat_intel: list[dict] = Field(default_factory=list)
 
 
 class ReportResponse(BaseModel):

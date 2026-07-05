@@ -34,6 +34,7 @@ class Scan(Base):
     content_hashes_json: Mapped[str] = mapped_column(Text, default="{}")
     rescan_of: Mapped[str | None] = mapped_column(String(36), nullable=True)
     inline_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ai_json: Mapped[str] = mapped_column(Text, default="{}")
 
     findings: Mapped[list["Finding"]] = relationship(back_populates="scan", lazy="selectin")
 

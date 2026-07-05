@@ -306,6 +306,98 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
           </section>
         )}
 
+        {/* AI Attack Scenarios */}
+        {scan.ai_attack_scenarios && scan.ai_attack_scenarios.length > 0 && (
+          <section>
+            <p className="text-[10px] font-medium uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: "#a855f7", letterSpacing: "0.1em" }}>
+              <Swords className="h-3 w-3" /> AI-Generated Attack Scenarios
+            </p>
+            <div className="space-y-1.5">
+              {scan.ai_attack_scenarios.map((scenario, i) => (
+                <div key={i} style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
+                  <div className="p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[13px] font-medium" style={{ color: "#e5e5e5" }}>{scenario.title}</span>
+                      <SeverityBadge severity={scenario.severity} />
+                    </div>
+                    <div className="space-y-2 text-[12px]" style={{ color: "#a3a3a3" }}>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider" style={{ color: "#525252" }}>Vector</span>
+                        <p style={{ lineHeight: 1.5 }}>{scenario.vector}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider" style={{ color: "#525252" }}>Impact</span>
+                        <p style={{ lineHeight: 1.5 }}>{scenario.impact}</p>
+                      </div>
+                      {scenario.steps && scenario.steps.length > 0 && (
+                        <div>
+                          <span className="text-[10px] uppercase tracking-wider" style={{ color: "#525252" }}>Exploitation Steps</span>
+                          <ol className="mt-1 space-y-1">
+                            {scenario.steps.map((step, j) => (
+                              <li key={j} className="flex items-start gap-1.5">
+                                <span className="text-[10px] font-mono mt-0.5" style={{ color: "#525252" }}>{j + 1}.</span>
+                                <span style={{ lineHeight: 1.5 }}>{step}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* AI Threat Intelligence */}
+        {scan.ai_threat_intel && scan.ai_threat_intel.length > 0 && (
+          <section>
+            <p className="text-[10px] font-medium uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: "#f97316", letterSpacing: "0.1em" }}>
+              <AlertTriangle className="h-3 w-3" /> Threat Intelligence
+            </p>
+            <div className="space-y-1.5">
+              {scan.ai_threat_intel.map((intel, i) => (
+                <div key={i} className="p-3" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
+                  <p className="text-[12px] font-medium mb-2" style={{ color: "#e5e5e5" }}>{intel.category}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                    {intel.cves && intel.cves.length > 0 && (
+                      <div>
+                        <span className="text-[9px] uppercase tracking-wider" style={{ color: "#525252" }}>CVEs</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {intel.cves.map((cve, j) => (
+                            <span key={j} className="px-1.5 py-0.5 font-mono" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", borderRadius: "2px" }}>{cve}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {intel.mitre_techniques && intel.mitre_techniques.length > 0 && (
+                      <div>
+                        <span className="text-[9px] uppercase tracking-wider" style={{ color: "#525252" }}>MITRE ATT&CK</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {intel.mitre_techniques.map((t, j) => (
+                            <span key={j} className="px-1.5 py-0.5" style={{ background: "rgba(249,115,22,0.1)", color: "#f97316", borderRadius: "2px" }}>{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {intel.campaigns && intel.campaigns.length > 0 && (
+                      <div>
+                        <span className="text-[9px] uppercase tracking-wider" style={{ color: "#525252" }}>Campaigns</span>
+                        <div className="mt-1 space-y-0.5">
+                          {intel.campaigns.map((c, j) => (
+                            <p key={j} className="text-[10px]" style={{ color: "#a3a3a3" }}>{c}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Findings */}
         <section>
           <p className="text-[10px] font-medium uppercase tracking-widest mb-2" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>
@@ -349,6 +441,51 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
                 {report.executive_summary}
               </p>
             )}
+          </section>
+        )}
+
+        {/* AI Risk Narrative */}
+        {scan.ai_narrative && scan.ai_narrative.summary && (
+          <section className="p-4" style={{ background: "#111111", border: "1px solid #a855f730", borderRadius: "6px" }}>
+            <p className="text-[10px] font-medium uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: "#a855f7", letterSpacing: "0.1em" }}>
+              AI Risk Analysis
+            </p>
+            <p className="text-[13px] mb-2" style={{ color: "#e5e5e5", lineHeight: 1.6 }}>
+              {scan.ai_narrative.summary}
+            </p>
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="px-2 py-0.5 uppercase font-medium" style={{
+                background: scan.ai_narrative.verdict === "reject" ? "rgba(239,68,68,0.15)" : scan.ai_narrative.verdict === "approve" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.15)",
+                color: scan.ai_narrative.verdict === "reject" ? "#ef4444" : scan.ai_narrative.verdict === "approve" ? "#22c55e" : "#eab308",
+                borderRadius: "2px",
+              }}>
+                {scan.ai_narrative.verdict}
+              </span>
+              <span style={{ color: "#525252" }}>Confidence: {scan.ai_narrative.confidence}</span>
+            </div>
+          </section>
+        )}
+
+        {/* AI Remediation */}
+        {scan.ai_remediation && scan.ai_remediation.length > 0 && (
+          <section>
+            <p className="text-[10px] font-medium uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>
+              AI-Powered Remediation
+            </p>
+            <div className="space-y-1.5">
+              {scan.ai_remediation.map((rem, i) => (
+                <div key={i} className="p-3" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
+                  <p className="text-[12px] font-medium mb-1.5" style={{ color: "#e5e5e5" }}>{rem.finding_title}</p>
+                  <div className="p-2 mb-1.5 font-mono text-[11px]" style={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: "4px", color: "#22c55e" }}>
+                    {rem.fix}
+                  </div>
+                  <p className="text-[11px]" style={{ color: "#a3a3a3", lineHeight: 1.5 }}>{rem.explanation}</p>
+                  {rem.tradeoffs && rem.tradeoffs !== "None" && (
+                    <p className="text-[10px] mt-1" style={{ color: "#525252" }}>Trade-offs: {rem.tradeoffs}</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

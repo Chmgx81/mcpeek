@@ -12,6 +12,8 @@ from .mcp_scanner import scan_mcp_server
 from .package_scanner import scan_package
 from .risk_scorer import build_summary, calculate_risk
 from .skill_scanner import scan_skill
+from .ai_analyzer import run_ai_analysis
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +79,31 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
         # Calculate risk
         overall_risk, risk_level = calculate_risk(all_findings)
         summary = build_summary(all_findings)
+
+        # Run AI analysis if API key provided (user key or backend key)
+        ai_results = {}
+        ai_key = (request.options.ai_api_key if request.options else None) or settings.OPENROUTER_API_KEY
+        if ai_key:
+            findings_dicts = [
+                {
+                    "category": f.category,
+                    "severity": f.severity,
+                    "title": f.title,
+                    "description": f.description,
+                    "remediation": f.remediation,
+                }
+                for f in all_findings
+            ]
+            ai_results = await run_ai_analysis(
+                findings=findings_dicts,
+                target=request.target,
+                target_type=request.target_type.value,
+                risk_score=overall_risk,
+                trust_score=summary.get("trust_score", 100),
+                api_key=ai_key,
+                model=request.options.ai_model if request.options and request.options.ai_model else "openai/gpt-oss-20b:free",
+            )
+
         duration_ms = int((time.monotonic() - start) * 1000)
 
         # Save findings to DB
@@ -106,6 +133,7 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
         scan.urls_checked = metadata.get("urls_checked", 0)
         scan.deps_analyzed = metadata.get("deps_analyzed", 0)
         scan.content_hashes_json = hashes_to_json(content_hashes) if content_hashes else "{}"
+        scan.ai_json = json.dumps(ai_results) if ai_results else "{}"
         if request.rescan_of:
             scan.rescan_of = request.rescan_of
 

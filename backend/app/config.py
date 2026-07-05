@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 10
     ALLOW_LOCAL_PATH_SCANS: bool = False
     ALLOW_PRIVATE_NETWORK_SCANS: bool = False
+    OPENROUTER_API_KEY: str = ""
 
     model_config = {"env_prefix": "MCPEEK_"}
 

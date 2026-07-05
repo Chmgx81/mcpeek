@@ -13,6 +13,8 @@ export interface ScanRequest {
     deep?: boolean;
     timeout?: number;
     inline_content?: string;
+    ai_api_key?: string;
+    ai_model?: string;
   };
   rescan_of?: string;
 }
@@ -56,6 +58,39 @@ export interface ScanResponse {
   created_at: string;
   content_changed?: boolean;
   rescan_of?: string;
+  ai_attack_scenarios?: AIAttackScenario[];
+  ai_remediation?: AIRemediation[];
+  ai_narrative?: AINarrative;
+  ai_threat_intel?: AIThreatIntel[];
+}
+
+export interface AIAttackScenario {
+  title: string;
+  vector: string;
+  impact: string;
+  steps: string[];
+  severity: Severity;
+  related_finding: string;
+}
+
+export interface AIRemediation {
+  finding_title: string;
+  fix: string;
+  explanation: string;
+  tradeoffs: string;
+}
+
+export interface AINarrative {
+  summary: string;
+  verdict: string;
+  confidence: string;
+}
+
+export interface AIThreatIntel {
+  category: string;
+  cves: string[];
+  campaigns: string[];
+  mitre_techniques: string[];
 }
 
 export interface PaginatedScans {

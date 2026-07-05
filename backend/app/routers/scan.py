@@ -207,6 +207,10 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
         error_message=scan.error_message,
         content_changed=_content_changed(scan, previous_scan),
         rescan_of=scan.rescan_of,
+        ai_attack_scenarios=json.loads(scan.ai_json).get("ai_attack_scenarios", []) if scan.ai_json else [],
+        ai_remediation=json.loads(scan.ai_json).get("ai_remediation", []) if scan.ai_json else [],
+        ai_narrative=json.loads(scan.ai_json).get("ai_narrative", {}) if scan.ai_json else {},
+        ai_threat_intel=json.loads(scan.ai_json).get("ai_threat_intel", []) if scan.ai_json else [],
     )
 
 
