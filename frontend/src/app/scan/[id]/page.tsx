@@ -186,7 +186,7 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
             <ArrowLeft className="h-3 w-3" /> Dashboard
           </Link>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-[15px] font-bold truncate" style={{ color: "#e5e5e5" }}>
@@ -212,45 +212,47 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-4 sm:gap-6">
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-[8px] uppercase tracking-widest" style={{ color: "#525252" }}>Security</span>
-                  <RiskScore score={scan.overall_risk} size="lg" />
+                  <RiskScore score={scan.overall_risk} size="md" />
                 </div>
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-[8px] uppercase tracking-widest" style={{ color: "#525252" }}>Trust</span>
-                  <RiskScore score={trustScore} size="lg" isTrust />
+                  <RiskScore score={trustScore} size="md" isTrust />
                 </div>
               </div>
-              {scan.status === "completed" && (
+              <div className="flex items-center gap-2">
+                {scan.status === "completed" && (
+                  <button
+                    onClick={handleRescan}
+                    disabled={rescanning}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
+                    style={{
+                      border: "1px solid #262626",
+                      color: rescanning ? "#22c55e" : "#737373",
+                      borderRadius: "3px",
+                    }}
+                  >
+                    {rescanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    <span className="hidden sm:inline">{rescanning ? "Re-scanning..." : "Re-scan"}</span>
+                  </button>
+                )}
                 <button
-                  onClick={handleRescan}
-                  disabled={rescanning}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
                   style={{
-                    border: "1px solid #262626",
-                    color: rescanning ? "#22c55e" : "#737373",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    color: deleting ? "#ef4444" : "#737373",
                     borderRadius: "3px",
                   }}
                 >
-                  {rescanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                  {rescanning ? "Re-scanning..." : "Re-scan"}
+                  {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
                 </button>
-              )}
-              <button
-                onClick={() => setConfirmDelete(true)}
-                disabled={deleting}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
-                style={{
-                  border: "1px solid rgba(239,68,68,0.3)",
-                  color: deleting ? "#ef4444" : "#737373",
-                  borderRadius: "3px",
-                }}
-              >
-                {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
+              </div>
             </div>
           </div>
         </div>

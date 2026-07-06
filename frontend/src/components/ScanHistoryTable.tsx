@@ -31,8 +31,8 @@ export default function ScanHistoryTable({ scans, loading, onDelete, deletingId 
 
   if (loading) {
     return (
-      <div style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
-        <table className="w-full">
+      <div className="overflow-x-auto" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
+        <table className="w-full min-w-[400px]">
           <thead>
             <tr style={{ borderBottom: "1px solid #1a1a1a" }}>
               {["Target", "Type", "Risk", "Status", "Date"].map((h) => (
@@ -66,8 +66,8 @@ export default function ScanHistoryTable({ scans, loading, onDelete, deletingId 
   }
 
   return (
-    <div style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
-      <table className="w-full">
+    <div className="overflow-x-auto" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
+      <table className="w-full min-w-[400px]">
         <thead>
           <tr style={{ borderBottom: "1px solid #1a1a1a" }}>
             <th className="px-3 py-2 text-left text-[11px] font-medium" style={{ color: "#525252" }}>Target</th>
