@@ -32,7 +32,7 @@ _DECODER_PATTERNS = [
 
 _PACKING_PATTERNS = [
     (r"(?i)(?:self[-_]?extract|unpack|decompress|inflate|gunzip)", "Self-extracting/packing pattern"),
-    (r"(?i)(?:\.slice|\.substr|\.substring)\s*\(\s*\d+\s*\)\s*\.\s*(?:split|join|replace)", "String slicing for obfuscation"),
+    (r"(?i)(?:\.slice|\.substr|\.substring)\s*\(\s*\d+\s*(?:,\s*\d+\s*)?\)", "String slicing for obfuscation"),
     (r"(?i)(?:\\x[0-9a-f]{2}|\\u[0-9a-f]{4}){4,}", "Hex/unicode escape sequence chain"),
     (r"(?i)(?:String\.fromCharCode|chr\s*\(\s*\d+\s*\))", "Character code construction"),
     (r"(?i)\b(?:0x[0-9a-f]+,\s*){5,}", "Array of hex values (packed payload)"),
@@ -116,7 +116,7 @@ def detect_skillcloak(content: str, source: str = "config") -> list[FindingCreat
 
     # 1. Entropy check — high entropy in script-like content suggests encoding
     entropy = _calculate_shannon_entropy(content)
-    if entropy > 4.5 and len(content) > 100:
+    if entropy > 4.5 and len(content) > 30:
         findings.append(FindingCreate(
             category="skillcloak",
             severity="high",
