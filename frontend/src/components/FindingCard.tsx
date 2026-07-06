@@ -31,6 +31,7 @@ const CAT_LABELS: Record<string, string> = {
   scope_creep: "Scope Creep",
   intent_subversion: "Intent Subversion",
   context_oversharing: "Context Over-Sharing",
+  skillcloak: "SKILLCLOAK",
 };
 
 export default function FindingCard({ finding }: { finding: Finding }) {

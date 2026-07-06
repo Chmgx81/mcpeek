@@ -50,6 +50,10 @@ async def scan_skill(target: str, deep: bool = True, timeout: int = 120, inline_
     # AST-based code analysis (beyond regex)
     findings.extend(analyze_code(content))
 
+    # SKILLCLOAK detection — entropy, blob, manifest abuse
+    from .skillcloak_detector import detect_skillcloak
+    findings.extend(detect_skillcloak(content, source=target))
+
     # Extract and analyze URLs
     urls_found.extend(extract_urls(content))
     if deep and urls_found:

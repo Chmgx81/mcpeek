@@ -75,6 +75,10 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
     # Advanced prompt injection detection
     findings.extend(detect_advanced_injection(content, target))
 
+    # SKILLCLOAK detection — entropy, blob, manifest abuse
+    from .skillcloak_detector import detect_skillcloak
+    findings.extend(detect_skillcloak(content, source=target))
+
     # Extract URLs for external analysis
     urls_found.extend(extract_urls(content))
     urls_found.extend(extract_urls(json.dumps(manifest) if manifest else ""))
