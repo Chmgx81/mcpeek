@@ -577,7 +577,7 @@ function Footer() {
       <div className="mx-auto max-w-[1100px]">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-4">
-            <Logo size={32} />
+            <Logo size={40} />
             <span className="text-4xl font-bold tracking-tight" style={{ color: "#fafafa", letterSpacing: "-0.04em" }}>MCPeek</span>
           </div>
           <p className="text-[13px] max-w-md mx-auto" style={{ color: "#525252", lineHeight: 1.6 }}>
