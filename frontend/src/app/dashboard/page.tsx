@@ -64,9 +64,15 @@ export default function DashboardPage() {
         <div data-tour="stats">
           <p className="text-[10px] font-medium uppercase tracking-widest mb-2" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Overview</p>
           {loading ? (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 rounded" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }} />
+                <div key={i} className="flex items-center gap-2.5 p-3 animate-pulse" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
+                  <div className="h-8 w-8 rounded" style={{ background: "#1a1a1a" }} />
+                  <div className="space-y-1.5">
+                    <div className="h-4 w-8 rounded" style={{ background: "#1a1a1a" }} />
+                    <div className="h-2.5 w-16 rounded" style={{ background: "#1a1a1a" }} />
+                  </div>
+                </div>
               ))}
             </div>
           ) : (

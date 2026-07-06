@@ -43,11 +43,12 @@ export default function ScanHistoryTable({ scans, loading, onDelete, deletingId 
           <tbody>
             {[1, 2, 3].map((i) => (
               <tr key={i} style={{ borderBottom: "1px solid #1a1a1a" }}>
-                {[1, 2, 3, 4, 5].map((j) => (
-                  <td key={j} className="px-3 py-2">
-                    <div className="h-3 w-16 rounded animate-pulse" style={{ background: "#1a1a1a" }} />
-                  </td>
-                ))}
+                <td className="px-3 py-2.5"><div className="h-3 rounded animate-pulse" style={{ background: "#1a1a1a", width: `${60 + i * 10}%` }} /></td>
+                <td className="px-3 py-2.5 hidden sm:table-cell"><div className="h-3 w-16 rounded animate-pulse" style={{ background: "#1a1a1a" }} /></td>
+                <td className="px-3 py-2.5"><div className="h-3 w-12 rounded animate-pulse" style={{ background: "#1a1a1a" }} /></td>
+                <td className="px-3 py-2.5"><div className="h-3 w-14 rounded animate-pulse" style={{ background: "#1a1a1a" }} /></td>
+                <td className="px-3 py-2.5 hidden sm:table-cell"><div className="h-3 w-20 rounded animate-pulse" style={{ background: "#1a1a1a" }} /></td>
+                <td className="px-3 py-2.5"><div className="h-3 w-3 rounded animate-pulse" style={{ background: "#1a1a1a" }} /></td>
               </tr>
             ))}
           </tbody>

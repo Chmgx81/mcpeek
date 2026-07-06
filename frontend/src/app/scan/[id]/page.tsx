@@ -119,17 +119,35 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center py-32" style={{ background: "#0a0a0a" }}>
-      <div className="flex flex-col items-center gap-3">
-        <div className="relative">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#22c55e" }} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-2 w-2 rounded-full" style={{ background: "#22c55e" }} />
+    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+      <div style={{ borderBottom: "1px solid #1a1a1a", background: "#0f0f0f" }}>
+        <div className="mx-auto max-w-3xl px-5 py-4 md:px-8">
+          <div className="h-3 w-16 rounded mb-3 animate-pulse" style={{ background: "#1a1a1a" }} />
+          <div className="flex flex-col gap-3">
+            <div className="h-4 w-48 rounded animate-pulse" style={{ background: "#1a1a1a" }} />
+            <div className="flex items-center justify-between">
+              <div className="h-3 w-24 rounded animate-pulse" style={{ background: "#1a1a1a" }} />
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-full animate-pulse" style={{ background: "#1a1a1a" }} />
+                <div className="h-14 w-14 rounded-full animate-pulse" style={{ background: "#1a1a1a" }} />
+                <div className="h-8 w-16 rounded animate-pulse" style={{ background: "#1a1a1a" }} />
+                <div className="h-8 w-16 rounded animate-pulse" style={{ background: "#1a1a1a" }} />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="text-center">
-          <p className="text-[13px] font-medium" style={{ color: "#e5e5e5" }}>Loading results</p>
-          <p className="text-[11px] mt-0.5" style={{ color: "#525252" }}>Analyzing findings...</p>
+      </div>
+      <div className="mx-auto max-w-3xl space-y-5 px-5 py-5 md:px-8">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-20 rounded animate-pulse" style={{ background: "#111111", border: "1px solid #1a1a1a" }} />
+          ))}
+        </div>
+        <div className="h-10 rounded animate-pulse" style={{ background: "#111111", border: "1px solid #1a1a1a" }} />
+        <div className="space-y-1.5">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 rounded animate-pulse" style={{ background: "#111111", border: "1px solid #1a1a1a" }} />
+          ))}
         </div>
       </div>
     </div>
