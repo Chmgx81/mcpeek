@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight, FileSearch, Globe, Lock, Terminal, Eye, ChevronDown,
   ShieldCheck, Zap, Users, FileWarning, Check, X as XIcon, ChevronRight,
+  Fingerprint,
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import CookieBanner from "@/components/CookieBanner";
@@ -280,6 +281,13 @@ function BentoFeatures() {
       accent: "#a855f7",
     },
     {
+      title: "SKILLCLOAK Defense",
+      desc: "Detects self-extracting skills (SFS) that hide payloads in hidden directories and unpack at runtime. Catches entropy, decoder patterns, and manifest abuse.",
+      icon: Fingerprint,
+      span: "col-span-1 row-span-1",
+      accent: "#f97316",
+    },
+    {
       title: "AI Attack Analysis",
       desc: "Optional AI-powered dynamic attack scenarios, threat intelligence mapping, and actionable remediation suggestions via OpenRouter.",
       icon: ShieldCheck,
@@ -426,6 +434,7 @@ function ComparisonTable() {
     { name: "Tool poisoning detection (MCP03)", mcpeek: true, generic: false, traditional: false },
     { name: "Scope creep detection (MCP02)", mcpeek: true, generic: false, traditional: false },
     { name: "Intent subversion detection (MCP06)", mcpeek: true, generic: false, traditional: false },
+    { name: "SKILLCLOAK / SFS detection", mcpeek: true, generic: false, traditional: false },
     { name: "Supply chain analysis", mcpeek: true, generic: true, traditional: true },
     { name: "Open source / free", mcpeek: true, generic: true, traditional: false },
   ];

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import {
   ArrowLeft, Clock, FileText, Link2, Package, Loader2, AlertTriangle,
-  Shield, Globe, Lock, Swords, ChevronDown, ChevronUp, FileJson, FileCode, Share2, Check, RefreshCw, AlertOctagon, Trash2,
+  Shield, Globe, Lock, Swords, ChevronDown, ChevronUp, FileJson, FileCode, Share2, Check, RefreshCw, AlertOctagon, Trash2, Fingerprint,
 } from "lucide-react";
 import Link from "next/link";
 import RiskScore from "@/components/RiskScore";
@@ -156,6 +156,7 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   const trustRisks = scan.findings.filter((f) =>
     ["supply_chain", "permissions", "social_engineering", "scope_creep", "intent_subversion", "context_oversharing"].includes(f.category)
   ).length;
+  const skillcloakFindings = scan.findings.filter((f) => f.category === "skillcloak");
 
   const trustScore = report?.json?.scores?.trust_score?.value ?? Math.max(0, 100 - trustRisks * 15 - runtimeRisks * 10);
 
@@ -290,6 +291,19 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
                   ))}
                 </ul>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* SKILLCLOAK alert */}
+        {skillcloakFindings.length > 0 && (
+          <div className="p-3 flex items-start gap-2.5" style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: "6px" }}>
+            <Fingerprint className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#f97316" }} />
+            <div>
+              <p className="text-[12px] font-semibold" style={{ color: "#f97316" }}>SKILLCLOAK patterns detected</p>
+              <p className="text-[11px] mt-0.5" style={{ color: "#a3a3a3" }}>
+                This scan found {skillcloakFindings.length} pattern(s) matching the SKILLCLOAK attack technique — self-extracting skills that hide payloads in hidden directories and unpack at runtime.
+              </p>
             </div>
           </div>
         )}

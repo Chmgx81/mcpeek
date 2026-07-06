@@ -77,6 +77,19 @@ MCPeek analyzes the full attack surface of MCP configurations: shell execution p
 | MCP06 | Intent Subversion | Redirect instructions (`instead of user's goal`, `your new mission`) |
 | MCP10 | Context Over-Sharing | Shared context spaces, bulk data access patterns |
 
+### SKILLCLOAK Detection
+
+Defends against the [SKILLCLOAK technique](https://thehackernews.com/2026/07/new-skillcloak-technique-lets-malicious.html) — self-extracting skills (SFS) that bypass static scanners by hiding payloads in hidden directories and unpacking at runtime.
+
+| Check | What It Catches |
+|-------|----------------|
+| **Shannon Entropy** | High-entropy blobs (encoded/encrypted payloads) |
+| **Hidden Directory Audit** | `.git/`, `.cache/`, `build/`, nested hidden dirs |
+| **Decoder Detection** | `atob`, `Buffer.from`, `eval`, `Function`, `subprocess` |
+| **Packing Patterns** | Hex arrays, unicode chains, string slicing, `fromCharCode` |
+| **Manifest Abuse** | `writeFileSync`, `mkdirSync`, `chmod` at runtime |
+| **Exfil via Decode** | `fetch` + `eval` combos (network-fetched payloads) |
+
 ### Bait-and-Switch Defense
 
 MCPeek's key differentiator: it detects when an attacker swaps a clean configuration for a malicious one after initial approval.
@@ -147,6 +160,8 @@ Fetch & Parse (HTTP GET, JSON parse, registry lookup)
 Static Analysis (regex patterns, AST parsing, config inspection)
     ↓
 Advanced Detection (OWASP MCP, injection, tool poisoning)
+    ↓
+SKILLCLOAK Defense (entropy, blobs, decoder patterns, manifest abuse)
     ↓
 Trust Scoring (domain reputation, dependency risk, supply chain)
     ↓
