@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Finding, Scan
 from ..schemas import FindingCreate, ScanRequest, TargetType
-from .content_hash import compare_hashes, hash_external_urls, hashes_from_json
+from .content_hash import compare_hashes, hashes_from_json
 from .mcp_scanner import scan_mcp_server
 from .package_scanner import scan_package
 from .risk_scorer import build_summary, calculate_risk

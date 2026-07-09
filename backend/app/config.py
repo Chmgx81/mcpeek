@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     ALLOW_LOCAL_PATH_SCANS: bool = False
     ALLOW_PRIVATE_NETWORK_SCANS: bool = False
     OPENROUTER_API_KEY: str = ""
+    SKILLCLOAK_ENTROPY_THRESHOLD: float = 5.5
 
     model_config = {"env_prefix": "MCPEEK_"}
 

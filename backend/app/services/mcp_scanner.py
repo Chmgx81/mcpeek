@@ -25,6 +25,12 @@ SUSPICIOUS_SCRIPT_PATTERNS = [
     (r"(?i)child_process|subprocess|os\.system|os\.popen", "System command execution"),
     (r"(?i)spawn|execSync|execFile", "Process spawning"),
     (r"(?i)\.on\(['\"](?:exit|close|error)", "Process lifecycle hooks"),
+    (r"(?i)\bpython3?\s+-c\b", "Python inline code execution"),
+    (r"(?i)\bnode\s+(-e|--eval)\b", "Node.js inline code execution"),
+    (r"(?i)\bruby\s+-e\b", "Ruby inline code execution"),
+    (r"(?i)\bperl\s+-e\b", "Perl inline code execution"),
+    (r"(?i)\bimport\s+socket\b.*\bconnect\s*\(", "Socket connection (potential reverse shell)"),
+    (r"(?i)\bos\.environ\b", "Environment variable access"),
 ]
 
 

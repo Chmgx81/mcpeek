@@ -1,10 +1,11 @@
 import json
+import logging
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from sqlalchemy import func, select
+from sqlalchemy import func, select, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
@@ -22,6 +23,8 @@ from ..schemas import (
 from ..services.scanner import run_scan
 from ..services.content_hash import compare_hashes, hashes_from_json
 from ..services.url_safety import is_blocked_host
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1")
 limiter = Limiter(key_func=get_remote_address)
@@ -61,6 +64,16 @@ def _validate_target(target: str, target_type: str) -> None:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+SEVERITY_ORDER = case(
+    (Finding.severity == "critical", 0),
+    (Finding.severity == "high", 1),
+    (Finding.severity == "medium", 2),
+    (Finding.severity == "low", 3),
+    (Finding.severity == "info", 4),
+    else_=5,
+)
+
 
 def _finding_dicts(findings: list[Finding]) -> list[dict]:
     return [
@@ -150,8 +163,31 @@ async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks:
 async def _run_scan_task(scan_id: str, request: ScanRequest) -> None:
     from ..database import async_session
 
-    async with async_session() as db:
-        await run_scan(scan_id, request, db)
+    max_retries = 2
+    for attempt in range(max_retries + 1):
+        try:
+            async with async_session() as db:
+                await run_scan(scan_id, request, db)
+            return
+        except Exception:
+            if attempt < max_retries:
+                logger.warning("Scan %s attempt %d failed, retrying...", scan_id, attempt + 1)
+                import asyncio
+                await asyncio.sleep(2 ** attempt)
+            else:
+                logger.exception("Scan %s failed after %d attempts", scan_id, max_retries + 1)
+                # Mark as failed in DB
+                try:
+                    async with async_session() as db:
+                        from sqlalchemy import select
+                        result = await db.execute(select(Scan).where(Scan.id == scan_id))
+                        scan = result.scalar_one_or_none()
+                        if scan and scan.status != "completed":
+                            scan.status = "failed"
+                            scan.error_message = "Scan failed after retries"
+                            await db.commit()
+                except Exception:
+                    logger.exception("Failed to mark scan %s as failed", scan_id)
 
 
 # ---------------------------------------------------------------------------
@@ -184,7 +220,7 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Scan not found")
 
     findings_result = await db.execute(
-        select(Finding).where(Finding.scan_id == scan_id).order_by(Finding.severity)
+        select(Finding).where(Finding.scan_id == scan_id).order_by(SEVERITY_ORDER)
     )
     findings = findings_result.scalars().all()
 
@@ -305,7 +341,7 @@ async def get_report(scan_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Scan not found")
 
     findings_result = await db.execute(
-        select(Finding).where(Finding.scan_id == scan_id).order_by(Finding.severity)
+        select(Finding).where(Finding.scan_id == scan_id).order_by(SEVERITY_ORDER)
     )
     findings = findings_result.scalars().all()
 
@@ -338,7 +374,7 @@ async def get_full_report(scan_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Scan not found")
 
     findings_result = await db.execute(
-        select(Finding).where(Finding.scan_id == scan_id).order_by(Finding.severity)
+        select(Finding).where(Finding.scan_id == scan_id).order_by(SEVERITY_ORDER)
     )
     findings = findings_result.scalars().all()
 
@@ -375,7 +411,7 @@ async def export_report(
         raise HTTPException(status_code=404, detail="Scan not found")
 
     findings_result = await db.execute(
-        select(Finding).where(Finding.scan_id == scan_id).order_by(Finding.severity)
+        select(Finding).where(Finding.scan_id == scan_id).order_by(SEVERITY_ORDER)
     )
     findings = findings_result.scalars().all()
     meta = _meta(scan)

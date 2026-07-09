@@ -74,9 +74,24 @@ export default function ScanForm() {
     let options: Record<string, unknown> = { deep };
     if (inputMode === "text" && configText.trim()) {
       scanTarget = "__inline_config__";
-      options.inline_content = configText.trim();
+      // Sanitize: strip control characters and truncate to backend limit
+      const sanitized = configText
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+        .slice(0, 500_000);
+      options.inline_content = sanitized;
     }
     if (!scanTarget) return;
+    // Basic URL validation for URL mode
+    if (inputMode === "url" && scanTarget && !scanTarget.startsWith("__inline_config__")) {
+      if (scanTarget.length > 2048) {
+        setError("Target URL is too long (max 2048 characters)");
+        return;
+      }
+      if (scanTarget.includes("\n") || scanTarget.includes("\r")) {
+        setError("Target URL contains invalid characters");
+        return;
+      }
+    }
     setScanning(true);
     try {
       const result = await submitScan({ target_type: targetType, target: scanTarget, options });

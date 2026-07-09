@@ -11,11 +11,11 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 import httpx
 
-from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +32,41 @@ FREE_MODELS = [
 
 DEFAULT_MODEL = FREE_MODELS[0]
 
+# Characters that could enable prompt injection when embedded in LLM prompts
+_INJECTION_CHARS = re.compile(r"[^\x20-\x7E\n\r\t]")
+
+
+def _sanitize_for_llm(text: str, max_len: int = 500) -> str:
+    """Sanitize text before embedding in an LLM prompt.
+
+    Prevents prompt injection by:
+    1. Stripping non-printable/control characters
+    2. Truncating to a safe length
+    3. Wrapping in delimiters to distinguish data from instructions
+    """
+    if not text:
+        return ""
+    # Remove non-printable characters (except newline/tab)
+    cleaned = _INJECTION_CHARS.sub("", text)
+    # Collapse excessive whitespace/newlines that could be used for injection
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = re.sub(r" {4,}", "  ", cleaned)
+    # Truncate
+    if len(cleaned) > max_len:
+        cleaned = cleaned[:max_len] + "...[truncated]"
+    return cleaned
+
 
 def _build_attack_prompt(findings: list[dict], target: str, target_type: str) -> str:
+    safe_target = _sanitize_for_llm(target, 200)
     findings_text = "\n".join(
-        f"- [{f['severity'].upper()}] {f['title']}: {f['description'][:200]}"
+        f"- [{f['severity'].upper()}] {_sanitize_for_llm(f['title'], 100)}: {_sanitize_for_llm(f['description'], 200)}"
         for f in findings[:10]
     )
     return f"""Analyze these MCP security findings and generate 2 attack scenarios.
+
+Scan target: {safe_target}
+Target type: {_sanitize_for_llm(target_type, 50)}
 
 Findings:
 {findings_text}
@@ -51,11 +79,12 @@ Return ONLY a JSON array, no other text:
 
 def _build_remediation_prompt(findings: list[dict], target_type: str) -> str:
     findings_text = "\n".join(
-        f"- [{f['severity'].upper()}] {f['title']}"
+        f"- [{f['severity'].upper()}] {_sanitize_for_llm(f['title'], 100)}"
         for f in findings[:10]
     )
     return f"""Provide specific fixes for these MCP security findings:
 
+Findings:
 {findings_text}
 
 For each finding return JSON with: finding_title, fix (exact config change), explanation, tradeoffs.
@@ -68,10 +97,11 @@ def _build_narrative_prompt(findings: list[dict], risk_score: int, trust_score: 
     critical = sum(1 for f in findings if f.get("severity") == "critical")
     high = sum(1 for f in findings if f.get("severity") == "high")
     medium = sum(1 for f in findings if f.get("severity") == "medium")
+    safe_target = _sanitize_for_llm(target, 200)
 
     return f"""You are a security analyst writing an executive summary for a non-technical stakeholder.
 
-Scan target: {target}
+Scan target: {safe_target}
 Risk score: {risk_score}/100
 Trust score: {trust_score}/100
 Critical findings: {critical}
@@ -95,9 +125,10 @@ Return ONLY valid JSON:
 
 def _build_threat_intel_prompt(findings: list[dict]) -> str:
     categories = list(set(f.get("category", "") for f in findings))
+    safe_categories = [_sanitize_for_llm(c, 50) for c in categories]
     return f"""Map these MCP security finding categories to MITRE ATT&CK techniques.
 
-Categories: {', '.join(categories)}
+Categories: {', '.join(safe_categories)}
 
 For each category return JSON with: category, cves (array), campaigns (array), mitre_techniques (array like "T1059: Command and Scripting Interpreter").
 

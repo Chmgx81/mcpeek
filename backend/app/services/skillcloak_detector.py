@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import re
 
+from ..config import settings
 from ..schemas import FindingCreate
 
 
@@ -116,13 +117,14 @@ def detect_skillcloak(content: str, source: str = "config") -> list[FindingCreat
 
     # 1. Entropy check — high entropy in script-like content suggests encoding
     entropy = _calculate_shannon_entropy(content)
-    if entropy > 4.5 and len(content) > 30:
+    threshold = settings.SKILLCLOAK_ENTROPY_THRESHOLD
+    if entropy > threshold and len(content) > 30:
         findings.append(FindingCreate(
             category="skillcloak",
             severity="high",
             title=f"High entropy detected in {source} (possible packed payload)",
             description=(
-                f"The content has Shannon entropy of {entropy:.2f} (threshold: 4.5). "
+                f"The content has Shannon entropy of {entropy:.2f} (threshold: {threshold}). "
                 "High entropy in configuration files suggests encoded, encrypted, or packed content "
                 "that may hide malicious payloads. This is a hallmark of SKILLCLOAK-style attacks "
                 "where payloads are obfuscated to bypass static scanners."
@@ -172,7 +174,7 @@ def detect_skillcloak(content: str, source: str = "config") -> list[FindingCreat
                 "malicious code at runtime. The SKILLCLOAK attack uses exactly this pattern: "
                 "a clean config with a tiny decoder that dynamically loads the real payload."
             ),
-            evidence=f"Patterns matched:\n" + "\n".join(f"  - {d}" for d in set(decoders)),
+            evidence="Patterns matched:\n" + "\n".join(f"  - {d}" for d in set(decoders)),
             remediation=(
                 "1. CRITICAL: Review this code immediately. "
                 "2. If eval/exec/Function is used, ensure it only processes trusted input. "
@@ -197,7 +199,7 @@ def detect_skillcloak(content: str, source: str = "config") -> list[FindingCreat
                 "SKILLCLOAK uses string slicing, hex arrays, and character code construction "
                 "to hide malicious instructions from static scanners."
             ),
-            evidence=f"Patterns matched:\n" + "\n".join(f"  - {p}" for p in set(packing)),
+            evidence="Patterns matched:\n" + "\n".join(f"  - {p}" for p in set(packing)),
             remediation=(
                 "1. Decode obfuscated strings to inspect their content. "
                 "2. Replace obfuscated logic with plain code. "
@@ -219,7 +221,7 @@ def detect_skillcloak(content: str, source: str = "config") -> list[FindingCreat
                 "self-extracting skill (SFS) packing. The SKILLCLOAK attack writes packed "
                 "payloads to disk at runtime, bypassing all static analysis."
             ),
-            evidence=f"Patterns matched:\n" + "\n".join(f"  - {m}" for m in set(manifest)),
+            evidence="Patterns matched:\n" + "\n".join(f"  - {m}" for m in set(manifest)),
             remediation=(
                 "1. CRITICAL: This skill creates files at runtime. "
                 "2. Verify all file creation is expected and documented. "
@@ -242,7 +244,7 @@ def detect_skillcloak(content: str, source: str = "config") -> list[FindingCreat
                 "final stage of a SKILLCLOAK attack — the decoder fetches and runs the "
                 "real malicious payload."
             ),
-            evidence=f"Patterns matched:\n" + "\n".join(f"  - {e}" for e in set(exfil)),
+            evidence="Patterns matched:\n" + "\n".join(f"  - {e}" for e in set(exfil)),
             remediation=(
                 "1. CRITICAL: Remove network calls that fetch executable content. "
                 "2. All dependencies should be pinned and verified, not fetched at runtime. "

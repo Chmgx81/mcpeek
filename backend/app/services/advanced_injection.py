@@ -104,8 +104,8 @@ def _check_indirect_references(content: str, source: str) -> list[FindingCreate]
                 severity="medium",
                 title=f"Indirect instruction reference: {title}",
                 description=(
-                    f"The content contains an indirect reference pattern that may be used to "
-                    f"inject instructions through context manipulation."
+                    "The content contains an indirect reference pattern that may be used to "
+                    "inject instructions through context manipulation."
                 ),
                 evidence=f"Source: {source}\nContext: ...{context}...",
                 remediation="Review indirect references to ensure they don't enable instruction injection.",

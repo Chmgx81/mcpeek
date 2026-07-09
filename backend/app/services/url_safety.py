@@ -28,7 +28,13 @@ BLOCKED_NETWORKS = [
 ]
 
 
+def is_ip_blocked(ip: ipaddress.IPAddress) -> bool:
+    """Check if a single IP address falls in a blocked network range."""
+    return any(ip in net for net in BLOCKED_NETWORKS)
+
+
 def is_blocked_host(hostname: str) -> bool:
+    """Resolve hostname and check if ANY resolved IP is in a blocked range."""
     try:
         addresses = [ipaddress.ip_address(hostname)]
     except ValueError:
@@ -38,7 +44,21 @@ def is_blocked_host(hostname: str) -> bool:
             return True
         addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
 
-    return any(any(ip in net for net in BLOCKED_NETWORKS) for ip in addresses)
+    return any(is_ip_blocked(ip) for ip in addresses)
+
+
+def validate_ip_at_connect_time(ip_str: str) -> bool:
+    """Validate an IP address string against blocked networks.
+
+    Use this at connection time (after DNS resolution) to prevent
+    DNS rebinding attacks where the IP changes between lookup and connect.
+    Returns True if the IP is safe (not blocked).
+    """
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return True  # hostname, not IP — cannot check
+    return not is_ip_blocked(ip)
 
 
 def is_safe_public_url(url: str) -> bool:

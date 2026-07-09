@@ -53,6 +53,10 @@ SHELL_PATTERNS: list[tuple[str, str, str, str]] = [
     (r"(?i)\bchild_process\.(exec|execSync|spawn|spawnSync)\s*\(", "child_process call", "critical", "Node.js child_process invocation detected. Can execute arbitrary commands."),
     (r"(?i)\bRuntime\.getRuntime\(\)\.exec\s*\(", "Runtime.exec call", "critical", "Java Runtime.exec() detected. Executes OS commands."),
     (r"(?i)\bSystem\.Diagnostics\.Process\.Start\s*\(", "Process.Start call", "critical", "C# Process.Start() detected. Launches external processes."),
+    (r"(?i)\bpython3?\s+-c\s+['\"]", "Python inline code execution", "critical", "Python -c inline code execution detected. Can run arbitrary code."),
+    (r"(?i)\bnode\s+(-e|--eval)\s+['\"]", "Node.js inline code execution", "critical", "Node.js inline code execution detected. Can run arbitrary code."),
+    (r"(?i)\bruby\s+-e\s+['\"]", "Ruby inline code execution", "critical", "Ruby -e inline code execution detected."),
+    (r"(?i)\bperl\s+-e\s+['\"]", "Perl inline code execution", "critical", "Perl -e inline code execution detected."),
 ]
 
 # ── Dangerous tool permissions ──
@@ -84,10 +88,18 @@ SECRET_PATTERNS: list[tuple[str, str, str]] = [
     (r"sk-[A-Za-z0-9_-]{32,}", "OpenAI API Key", "CWE-798"),
     (r"xox[bpsa]-[A-Za-z0-9-]+", "Slack Token", "CWE-798"),
     (r"-----BEGIN (RSA |EC )?PRIVATE KEY-----", "Private Key", "CWE-321"),
+    # key=value / key:value style
     (r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"][^'\"]{6,}", "Hardcoded Password", "CWE-798"),
     (r"(?i)(api[_-]?key|apikey)\s*[:=]\s*['\"][A-Za-z0-9_-]{16,}", "API Key", "CWE-798"),
     (r"(?i)(secret[_-]?key)\s*[:=]\s*['\"][A-Za-z0-9_-]{16,}", "Secret Key", "CWE-798"),
     (r"(?i)(token)\s*[:=]\s*['\"][A-Za-z0-9_\-\.]{20,}", "Auth Token", "CWE-798"),
     (r"(?i)(aws_secret_access_key)\s*[:=]\s*['\"][A-Za-z0-9/+=]{40}", "AWS Secret Key", "CWE-798"),
     (r"(?i)(connection_?string|database_?url)\s*[:=]\s*['\"](?:mysql|postgres|mongodb|redis)://", "Database Connection String", "CWE-798"),
+    # JSON style: "key": "value"
+    (r'(?i)"(password|passwd|pwd)"\s*:\s*"[^"]{6,}"', "Hardcoded Password", "CWE-798"),
+    (r'(?i)"(api[_-]?key|apikey)"\s*:\s*"[A-Za-z0-9_-]{8,}"', "API Key", "CWE-798"),
+    (r'(?i)"(secret[_-]?key)"\s*:\s*"[A-Za-z0-9_-]{8,}"', "Secret Key", "CWE-798"),
+    (r'(?i)"(token)"\s*:\s*"[A-Za-z0-9_\-\.]{12,}"', "Auth Token", "CWE-798"),
+    (r'(?i)"(database_?url|db_?url|connection_?string)"\s*:\s*"(?:mysql|postgres|mongodb|redis)://[^"]*:[^"]*@', "Database Connection String with Credentials", "CWE-798"),
+    (r'(?i)"(aws_secret_access_key)"\s*:\s*"[A-Za-z0-9/+=]{20,}"', "AWS Secret Key", "CWE-798"),
 ]
