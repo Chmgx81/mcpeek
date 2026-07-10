@@ -27,7 +27,7 @@ function FooterLink({ label, href, external }: { label: string; href: string; ex
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
-      className="inline-flex items-center gap-1 text-[12px] transition-colors"
+      className="flex items-center gap-1 text-[12px] transition-colors"
       style={{ color: "#525252" }}
       onMouseEnter={(e) => (e.currentTarget.style.color = "#e5e5e5")}
       onMouseLeave={(e) => (e.currentTarget.style.color = "#525252")}
