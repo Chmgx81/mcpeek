@@ -66,7 +66,7 @@ class TestCalculateRisk:
 class TestBuildSummary:
     def test_empty_findings(self):
         summary = build_summary([])
-        assert summary == {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+        assert summary == {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0, "trust_score": 100}
 
     def test_counts_by_severity(self):
         findings = [
@@ -81,8 +81,14 @@ class TestBuildSummary:
         assert summary["medium"] == 1
         assert summary["low"] == 0
         assert summary["info"] == 0
+        assert summary["trust_score"] == 100
 
     def test_unknown_severity_not_counted(self):
         findings = [FindingCreate(category="test", severity="unknown", title="u", description="d")]
         summary = build_summary(findings)
-        assert all(v == 0 for v in summary.values())
+        assert summary["critical"] == 0
+        assert summary["high"] == 0
+        assert summary["medium"] == 0
+        assert summary["low"] == 0
+        assert summary["info"] == 0
+        assert summary["trust_score"] == 100

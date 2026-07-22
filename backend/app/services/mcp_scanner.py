@@ -192,7 +192,8 @@ def _check_mcp_config(manifest: dict | None, source: str) -> list[FindingCreate]
             command = server_config.get("command", "")
             args = server_config.get("args", [])
             if isinstance(command, str):
-                full_cmd = command + " " + " ".join(args if isinstance(args, list) else [])
+                safe_args = [str(a) for a in args] if isinstance(args, list) else []
+                full_cmd = command + " " + " ".join(safe_args)
                 for pattern, title in SUSPICIOUS_SCRIPT_PATTERNS:
                     if re.search(pattern, full_cmd):
                         findings.append(

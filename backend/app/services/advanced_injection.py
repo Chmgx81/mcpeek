@@ -63,7 +63,7 @@ def _check_homoglyphs(content: str, source: str) -> list[FindingCreate]:
                 if len(confusable_samples) < 3:
                     confusable_samples.append(f"'{char}' (U+{ord(char):04X} → '{HOMOGLYPHS[char]}')")
 
-    if confusable_count > 3:
+    if confusable_count >= 1:
         findings.append(FindingCreate(
             category="prompt_injection",
             severity="high",

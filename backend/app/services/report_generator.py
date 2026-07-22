@@ -309,7 +309,7 @@ def _build_recommendations(
     if cats & {"remote_code_execution", "system_modification"}:
         recs.append(
             "Eliminate arbitrary code execution paths. Use allowlists for "
-            " permitted commands and enforce least-privilege execution."
+            "permitted commands and enforce least-privilege execution."
         )
     if cats & {"exfiltration"}:
         recs.append(

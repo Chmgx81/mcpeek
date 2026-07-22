@@ -25,6 +25,8 @@ BLOCKED_NETWORKS = [
     ipaddress.ip_network("::1/128"),
     ipaddress.ip_network("fc00::/7"),
     ipaddress.ip_network("fe80::/10"),
+    ipaddress.ip_network("::ffff:0:0/96"),
+    ipaddress.ip_network("2001:db8::/32"),
 ]
 
 
@@ -40,7 +42,7 @@ def is_blocked_host(hostname: str) -> bool:
     except ValueError:
         try:
             infos = socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
-        except socket.gaierror:
+        except (socket.gaierror, socket.herror, socket.timeout, OSError):
             return True
         addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
 

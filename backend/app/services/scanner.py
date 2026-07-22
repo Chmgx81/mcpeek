@@ -62,6 +62,8 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
             )
             all_findings.extend(findings)
             _merge_metadata(metadata, meta)
+        else:
+            raise ValueError(f"Unsupported target type: {request.target_type}")
 
         # --- Re-scan comparison ---
         content_hashes = meta.get("content_hashes", {})

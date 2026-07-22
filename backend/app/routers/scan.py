@@ -82,7 +82,7 @@ def _finding_dicts(findings: list[Finding]) -> list[dict]:
             "title": f.title, "description": f.description,
             "evidence": f.evidence, "remediation": f.remediation,
             "cwe": f.cwe, "owasp": f.owasp,
-            "references": json.loads(f.references_json),
+            "references": json.loads(f.references_json) if f.references_json else [],
         }
         for f in findings
     ]
@@ -94,7 +94,7 @@ def _finding_responses(findings: list[Finding]) -> list[FindingResponse]:
             id=f.id, category=f.category, severity=f.severity,
             title=f.title, description=f.description, evidence=f.evidence,
             remediation=f.remediation, cwe=f.cwe, owasp=f.owasp,
-            references=json.loads(f.references_json),
+            references=json.loads(f.references_json) if f.references_json else [],
         )
         for f in findings
     ]
@@ -109,7 +109,7 @@ def _group_by_severity(findings: list[Finding]) -> dict[str, list[FindingRespons
             id=f.id, category=f.category, severity=f.severity,
             title=f.title, description=f.description, evidence=f.evidence,
             remediation=f.remediation, cwe=f.cwe, owasp=f.owasp,
-            references=json.loads(f.references_json),
+            references=json.loads(f.references_json) if f.references_json else [],
         )
         if f.severity in groups:
             groups[f.severity].append(fr)
@@ -229,6 +229,13 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
         previous_result = await db.execute(select(Scan).where(Scan.id == scan.rescan_of))
         previous_scan = previous_result.scalar_one_or_none()
 
+    ai_data = {}
+    if scan.ai_json:
+        try:
+            ai_data = json.loads(scan.ai_json)
+        except (json.JSONDecodeError, TypeError):
+            ai_data = {}
+
     return ScanResponse(
         scan_id=scan.id,
         status=scan.status,
@@ -243,10 +250,10 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
         error_message=scan.error_message,
         content_changed=_content_changed(scan, previous_scan),
         rescan_of=scan.rescan_of,
-        ai_attack_scenarios=json.loads(scan.ai_json).get("ai_attack_scenarios", []) if scan.ai_json else [],
-        ai_remediation=json.loads(scan.ai_json).get("ai_remediation", []) if scan.ai_json else [],
-        ai_narrative=json.loads(scan.ai_json).get("ai_narrative", {}) if scan.ai_json else {},
-        ai_threat_intel=json.loads(scan.ai_json).get("ai_threat_intel", []) if scan.ai_json else [],
+        ai_attack_scenarios=ai_data.get("ai_attack_scenarios", []),
+        ai_remediation=ai_data.get("ai_remediation", []),
+        ai_narrative=ai_data.get("ai_narrative", {}),
+        ai_threat_intel=ai_data.get("ai_threat_intel", []),
     )
 
 
