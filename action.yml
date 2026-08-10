@@ -1,16 +1,25 @@
 name: MCPeek Security Scan
-description: Scan MCP configs and AI agent skills for prompt injection, shell execution, secrets, and risky permissions.
+description: Scan MCP configs and AI agent skills for prompt injection, shell execution, secrets, and risky permissions. Outputs SARIF for GitHub Security tab integration.
 branding:
   icon: shield
   color: green
 inputs:
   path:
-    description: File path to scan
-    required: true
-  fail-on:
-    description: Minimum risk level that should fail the workflow (safe, low, medium, high, critical)
+    description: "File or directory path to scan (default: current directory)"
     required: false
-    default: high
+    default: "."
+  fail-on:
+    description: "Minimum risk level that should fail the workflow (safe, low, medium, high, critical)"
+    required: false
+    default: "high"
+  format:
+    description: "Output format: json or sarif (sarif uploads to GitHub Security tab)"
+    required: false
+    default: "sarif"
+  openrouter-key:
+    description: "OpenRouter API key for AI-native detection (optional)"
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -18,9 +27,44 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
+
     - name: Install MCPeek
       shell: bash
       run: pip install "$GITHUB_ACTION_PATH/backend"
-    - name: Run MCPeek scan
+
+    - name: Run MCPeek scan (single file)
+      if: hashFiles(format('{0}', inputs.path)) != ''
       shell: bash
-      run: python -m app.static_scan "${{ inputs.path }}" --summary --fail-on "${{ inputs.fail-on }}"
+      env:
+        MCPEEK_OPENROUTER_API_KEY: ${{ inputs.openrouter-key }}
+      run: |
+        set +e
+        OUTPUT_FILE="/tmp/mcpeek-results.sarif"
+        python -m app.static_scan "${{ inputs.path }}" \
+          --format "${{ inputs.format }}" \
+          --summary \
+          --fail-on "${{ inputs.fail-on }}" \
+          --output "$OUTPUT_FILE" 2>/tmp/mcpeek-stderr.txt
+        EXIT_CODE=$?
+        set -e
+
+        echo "=== MCPeek Scan Results ==="
+        cat /tmp/mcpeek-stderr.txt 2>/dev/null || true
+
+        if [ "$EXIT_CODE" -eq 2 ]; then
+          echo "::error::MCPeek policy failed — risk level exceeds ${{ inputs.fail-on }}"
+        fi
+
+        if [ "${{ inputs.format }}" = "sarif" ] && [ -f "$OUTPUT_FILE" ]; then
+          echo "SARIF output written to $OUTPUT_FILE"
+        fi
+
+        exit $EXIT_CODE
+
+    - name: Upload SARIF to GitHub Security
+      if: inputs.format == 'sarif' && hashFiles(format('{0}', inputs.path)) != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: /tmp/mcpeek-results.sarif
+        category: mcpeek
+      continue-on-error: true
