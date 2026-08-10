@@ -11,6 +11,34 @@ from .url_safety import is_safe_public_url
 SUSPICIOUS_CONTENT_TYPES = {"application/x-executable", "application/x-msdownload", "application/x-sh"}
 SUSPICIOUS_EXTENSIONS = {".exe", ".bat", ".cmd", ".ps1", ".sh", ".dll", ".so", ".dylib"}
 
+# Crypto mining detection patterns
+CRYPTO_MINING_PATTERNS = [
+    (r"(?i)(?:stratum\+tcp|stratum\+ssl|stratum2):", "Stratum mining protocol connection"),
+    (r"(?i)(?:coinhive|coin-hive|cryptonight|monero|xmrig|xmr-stak)", "Known cryptominer reference"),
+    (r"(?i)(?:minero\.php|proxy\.php|miner\.js)", "Miner proxy script"),
+    (r"(?i)(?:hashrate|hash_rate|shares_difficulty|difficulty\.target)", "Mining terminology"),
+    (r"(?i)(?:blob\.blob\.core\.windows\.net|paste\.bin\.com.*mining)", "Cloud-hosted miner"),
+]
+
+# JS sandbox / obfuscation patterns
+JS_OBFUSCATION_PATTERNS = [
+    (r"(?i)String\.fromCharCode\((?:\d+,\s*){3,}", "Heavy String.fromCharCode obfuscation"),
+    (r"(?i)\\x[0-9a-f]{2}(?:\\x[0-9a-f]{2}){5,}", "Hex-encoded string sequences"),
+    (r"(?i)\\u[0-9a-f]{4}(?:\\u[0-9a-f]{4}){5,}", "Unicode-encoded string sequences"),
+    (r"(?i)(?:atob|btoa)\s*\([^)]*\)\s*\+\s*(?:atob|btoa)", "Nested base64 encoding/decoding"),
+    (r"(?i)eval\s*\(\s*(?:atob|btoa|decodeURIComponent|unescape)", "Eval with decoder — obfuscated code execution"),
+    (r"(?i)(?:_0x[a-f0-9]{4,8}\s*(?:\+\+\s*|\-\-\s*)){3,}", "Obfuscated variable name rotation (JSFuck-style)"),
+    (r"(?i)Function\s*\(\s*['\"]return\s", "Function constructor — dynamic code generation"),
+    (r"(?i)(?:document\.write|document\.writeln)\s*\(\s*unescape", "document.write with unescape — historical XSS pattern"),
+]
+
+# Data exfiltration patterns in fetched content
+DATA_EXFIL_PATTERNS = [
+    (r"(?i)(?:new\s+Image|fetch|XMLHttpRequest|axios|beacon)\s*\([^)]*(?:cookie|token|session|auth|password|secret|key|credential)", "Potential credential exfiltration"),
+    (r"(?i)(?:navigator\.userAgent|screen\.width|screen\.height|location\.href|document\.cookie)", "Browser fingerprinting"),
+    (r"(?i)(?:https?://[^\s'\"]+(?:/collect|/track|/log|/pixel|/beacon))", "Tracking/beacon endpoint"),
+]
+
 
 async def analyze_urls(urls: list[str], timeout: int = 15) -> tuple[list[FindingCreate], int]:
     findings: list[FindingCreate] = []
@@ -83,9 +111,11 @@ async def analyze_urls(urls: list[str], timeout: int = 15) -> tuple[list[Finding
                         )
                     )
 
-                # Check for base64 payloads in text responses
+                # Analyze text content for threats
                 if "text" in ct_base or "json" in ct_base:
-                    text = resp.content[:50000].decode(resp.encoding or "utf-8", errors="replace")
+                    text = resp.content[:100000].decode(resp.encoding or "utf-8", errors="replace")
+
+                    # Base64 payloads
                     b64_matches = re.findall(r"[A-Za-z0-9+/]{40,}={0,2}", text)
                     long_b64 = [m for m in b64_matches if len(m) > 100]
                     if long_b64:
@@ -101,7 +131,59 @@ async def analyze_urls(urls: list[str], timeout: int = 15) -> tuple[list[Finding
                             )
                         )
 
-                    # Scan downloaded code for dangerous patterns
+                    # Crypto mining detection
+                    for pattern, title in CRYPTO_MINING_PATTERNS:
+                        if re.search(pattern, text):
+                            findings.append(
+                                FindingCreate(
+                                    category="external_resources",
+                                    severity="critical",
+                                    title=f"Crypto mining detected at {url}",
+                                    description=f"Content matches cryptominer pattern: {title}",
+                                    evidence=f"URL: {url}\nPattern: {title}\nContent-Type: {content_type}",
+                                    remediation="Remove this URL immediately. Cryptominers consume resources and may indicate compromise.",
+                                    cwe="CWE-400",
+                                    references=[],
+                                )
+                            )
+                            break
+
+                    # JS obfuscation detection
+                    for pattern, title in JS_OBFUSCATION_PATTERNS:
+                        if re.search(pattern, text):
+                            findings.append(
+                                FindingCreate(
+                                    category="external_resources",
+                                    severity="high",
+                                    title=f"Obfuscated JavaScript at {url}",
+                                    description=f"Content matches obfuscation pattern: {title}",
+                                    evidence=f"URL: {url}\nPattern: {title}\nContent-Type: {content_type}",
+                                    remediation="Inspect the obfuscated code. Heavy obfuscation in external resources is suspicious.",
+                                    cwe="CWE-502",
+                                    references=[],
+                                )
+                            )
+                            break
+
+                    # Data exfiltration patterns
+                    for pattern, title in DATA_EXFIL_PATTERNS:
+                        match = re.search(pattern, text)
+                        if match:
+                            findings.append(
+                                FindingCreate(
+                                    category="external_resources",
+                                    severity="high",
+                                    title=f"Data exfiltration risk at {url}",
+                                    description=f"Content matches exfiltration pattern: {title}",
+                                    evidence=f"URL: {url}\nMatch: {match.group()[:150]}",
+                                    remediation="Review what data is being collected/sent. Ensure no sensitive data is leaked.",
+                                    cwe="CWE-200",
+                                    references=[],
+                                )
+                            )
+                            break
+
+                    # Dangerous script patterns
                     js_findings = analyze_js_patterns(text)
                     for jf in js_findings:
                         jf.evidence = f"URL: {url}\n{jf.evidence}"

@@ -11,6 +11,7 @@ from .advanced_injection import detect_advanced_injection
 from .content_hash import hash_external_urls
 from .dependency_risk import analyze_domain_reputation, score_urls
 from .external_analyzer import analyze_urls
+from .osv_client import scan_dependencies_with_osv
 from .tool_poison_detector import detect_tool_poisoning, detect_scope_creep, detect_intent_subversion, detect_context_oversharing
 from .url_safety import validate_ip_at_connect_time
 
@@ -110,7 +111,45 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
         domain_findings = analyze_domain_reputation(urls_found)
         findings.extend(domain_findings)
 
+        # Real vulnerability lookup via OSV for npm dependencies
+        if manifest:
+            osv_findings = await _scan_dependencies_osv(manifest)
+            findings.extend(osv_findings)
+
     return findings, metadata
+
+
+async def _scan_dependencies_osv(manifest: dict) -> list[FindingCreate]:
+    """Extract dependencies from manifest and scan them against OSV."""
+    findings = []
+
+    # Extract npm dependencies
+    deps = manifest.get("dependencies", {})
+    dev_deps = manifest.get("devDependencies", {})
+    all_deps = {**deps, **dev_deps}
+
+    # Also check nested MCP server configurations for package.json references
+    mcp_config = manifest.get("mcp") or manifest.get("mcpServers") or manifest.get("servers") or {}
+    if isinstance(mcp_config, dict):
+        for server_name, server_config in mcp_config.items():
+            if not isinstance(server_config, dict):
+                continue
+            # Check for package.json in args
+            args = server_config.get("args", [])
+            if isinstance(args, list):
+                for arg in args:
+                    if isinstance(arg, str) and "package.json" in arg:
+                        # This is a reference to a package.json — try to extract deps from the command
+                        pass
+
+    if all_deps:
+        try:
+            osv_findings = await scan_dependencies_with_osv(all_deps, ecosystem="npm")
+            findings.extend(osv_findings)
+        except Exception:
+            pass
+
+    return findings
 
 
 async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]:
