@@ -1,27 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { use } from "react";
 import {
   ArrowLeft, Clock, FileText, Link2, Package, Loader2, AlertTriangle,
   Shield, Globe, Lock, Swords, ChevronDown, ChevronUp, FileJson, FileCode, Share2, Check, RefreshCw, AlertOctagon, Trash2, Fingerprint,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import RiskScore from "@/components/RiskScore";
 import FindingCard from "@/components/FindingCard";
 import SeverityBadge from "@/components/SeverityBadge";
 import ConfirmModal from "@/components/ConfirmModal";
 import { fetchScan, fetchFullReport, rescanScan, fetchContentChanges, deleteScan, type ContentChange } from "@/lib/api";
+import { useScanDeletion } from "@/hooks/use-scan-deletion";
+import { TYPE_LABELS, SEV_ORDER } from "@/lib/constants";
 import type { ScanResponse, FullReport, AttackScenario } from "@/lib/types";
-
-const TYPE_LABELS: Record<string, string> = {
-  mcp_server: "MCP Server",
-  agent_skill: "Agent Skill",
-  npm_package: "npm Package",
-  pypi_package: "PyPI Package",
-};
-
-const SEV_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
 function AttackCard({ scenario }: { scenario: AttackScenario }) {
   const [open, setOpen] = useState(false);
@@ -50,6 +44,7 @@ function AttackCard({ scenario }: { scenario: AttackScenario }) {
 
 export default function ScanResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const [report, setReport] = useState<FullReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,14 +52,14 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
   const [showExec, setShowExec] = useState(false);
   const [copied, setCopied] = useState(false);
   const [rescanning, setRescanning] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [contentChanges, setContentChanges] = useState<ContentChange[] | null>(null);
+
+  const { deletingId, confirmDeleteId, setConfirmDeleteId, handleDelete: rawHandleDelete } = useScanDeletion(() => {
+    router.push("/history");
+  });
 
   useEffect(() => {
     let cancelled = false;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
 
     Promise.all([
       fetchScan(id).catch((e) => { console.error("fetchScan failed:", e); throw e; }),
@@ -74,9 +69,9 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
     }).catch((e) => {
       console.error("Scan load error:", e);
       if (!cancelled) { setError(e instanceof Error ? e.message : "Failed to load scan results"); setLoading(false); }
-    }).finally(() => clearTimeout(timeout));
+    });
 
-    return () => { cancelled = true; controller.abort(); clearTimeout(timeout); };
+    return () => { cancelled = true; };
   }, [id]);
 
   // Load content changes if this is a re-scan
@@ -92,29 +87,19 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
     setRescanning(true);
     try {
       const result = await rescanScan(id);
-      // Poll until complete
+      const controller = new AbortController();
       for (let i = 0; i < 60; i++) {
         await new Promise((r) => setTimeout(r, 2000));
+        if (controller.signal.aborted) return;
         const updated = await fetchScan(result.scan_id);
         if (updated.status === "completed" || updated.status === "failed") {
-          window.location.href = `/scan/${result.scan_id}`;
+          router.push(`/scan/${result.scan_id}`);
           return;
         }
       }
       setRescanning(false);
     } catch {
       setRescanning(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setConfirmDelete(false);
-    setDeleting(true);
-    try {
-      await deleteScan(id);
-      window.location.href = "/history";
-    } catch {
-      setDeleting(false);
     }
   };
 
@@ -258,17 +243,17 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
                   </button>
                 )}
                 <button
-                  onClick={() => setConfirmDelete(true)}
-                  disabled={deleting}
+                  onClick={() => setConfirmDeleteId(id)}
+                  disabled={!!deletingId}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium transition-all disabled:opacity-50"
                   style={{
                     border: "1px solid rgba(239,68,68,0.3)",
-                    color: deleting ? "#ef4444" : "#737373",
+                    color: deletingId ? "#ef4444" : "#737373",
                     borderRadius: "3px",
                   }}
                 >
-                  {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                  <span className="hidden sm:inline">{deleting ? "Deleting..." : "Delete"}</span>
+                  {deletingId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{deletingId ? "Deleting..." : "Delete"}</span>
                 </button>
               </div>
             </div>
@@ -556,12 +541,12 @@ export default function ScanResultsPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <ConfirmModal
-        open={confirmDelete}
+        open={confirmDeleteId !== null}
         title="Delete scan"
         message="This scan and all its findings will be permanently deleted. This cannot be undone."
         confirmLabel="Delete"
-        onConfirm={handleDelete}
-        onCancel={() => setConfirmDelete(false)}
+        onConfirm={rawHandleDelete}
+        onCancel={() => setConfirmDeleteId(null)}
       />
     </div>
   );

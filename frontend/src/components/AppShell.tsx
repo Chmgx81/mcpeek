@@ -7,9 +7,8 @@ import CookieBanner from "./CookieBanner";
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
-  const isStandalone = pathname === "/demo";
 
-  if (isLanding || isStandalone) {
+  if (isLanding) {
     return <>{children}</>;
   }
 

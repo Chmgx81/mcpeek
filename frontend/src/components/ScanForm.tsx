@@ -48,10 +48,21 @@ export default function ScanForm() {
     return () => { if (stageRef.current) clearInterval(stageRef.current); };
   }, [scanning]);
 
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
   const poll = useCallback(
     async (scanId: string) => {
-      for (let i = 0; i < 300; i++) {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      for (let i = 0; i < 150; i++) {
         await new Promise((r) => setTimeout(r, 2000));
+        if (controller.signal.aborted) return;
         try {
           const r = await fetchScan(scanId);
           if (r.status === "completed" || r.status === "failed") {

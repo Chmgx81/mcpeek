@@ -12,6 +12,7 @@ from .content_hash import hash_external_urls
 from .dependency_risk import analyze_domain_reputation, score_urls
 from .external_analyzer import analyze_urls
 from .tool_poison_detector import detect_tool_poisoning, detect_scope_creep, detect_intent_subversion, detect_context_oversharing
+from .url_safety import validate_ip_at_connect_time
 
 SUSPICIOUS_URL_PATTERNS = [
     (r"(?i)eval\s*\(", "Code evaluation (eval)"),
@@ -112,10 +113,16 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
 
 
 async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]:
+    from ..config import settings
     try:
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             resp = await client.get(url)
             resp.raise_for_status()
+            # Validate the final URL after redirects (anti-DNS-rebinding via redirect)
+            if not settings.ALLOW_PRIVATE_NETWORK_SCANS:
+                final_host = str(resp.url.host) if resp.url.host else None
+                if final_host and not validate_ip_at_connect_time(final_host):
+                    return "", None
             text = resp.content[:1_000_000].decode(resp.encoding or "utf-8", errors="replace")
             try:
                 return text, resp.json()

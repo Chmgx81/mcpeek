@@ -6,15 +6,19 @@ import ScanForm from "@/components/ScanForm";
 import ScanHistoryTable from "@/components/ScanHistoryTable";
 import OnboardingTour from "@/components/OnboardingTour";
 import ConfirmModal from "@/components/ConfirmModal";
-import { fetchStats, fetchScans, deleteScan } from "@/lib/api";
+import { fetchStats, fetchScans } from "@/lib/api";
+import { useScanDeletion } from "@/hooks/use-scan-deletion";
 import type { StatsResponse, ScanResponse } from "@/lib/types";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [recentScans, setRecentScans] = useState<ScanResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const { deletingId, confirmDeleteId, setConfirmDeleteId, handleDelete: rawHandleDelete } = useScanDeletion((id) => {
+    setRecentScans((prev) => prev.filter((s) => s.scan_id !== id));
+    setStats((prev) => prev ? { ...prev, total_scans: Math.max(0, prev.total_scans - 1) } : prev);
+  });
 
   const load = useCallback(() => {
     Promise.all([
@@ -28,22 +32,6 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
-  const handleDelete = async () => {
-    const id = confirmDeleteId;
-    setConfirmDeleteId(null);
-    if (!id) return;
-    setDeletingId(id);
-    try {
-      await deleteScan(id);
-      setRecentScans((prev) => prev.filter((s) => s.scan_id !== id));
-      setStats((prev) => prev ? { ...prev, total_scans: Math.max(0, prev.total_scans - 1) } : prev);
-    } catch {
-      // ignore
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   return (
     <div className="px-5 py-6 md:px-8">
@@ -95,7 +83,7 @@ export default function DashboardPage() {
         title="Delete scan"
         message="This scan and all its findings will be permanently deleted. This cannot be undone."
         confirmLabel="Delete"
-        onConfirm={handleDelete}
+        onConfirm={rawHandleDelete}
         onCancel={() => setConfirmDeleteId(null)}
       />
     </div>

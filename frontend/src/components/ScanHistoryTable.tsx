@@ -3,28 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ArrowRight, Trash2 } from "lucide-react";
 import type { ScanResponse } from "@/lib/types";
-
-const TYPE_LABELS: Record<string, string> = {
-  mcp_server: "MCP Server",
-  agent_skill: "Agent Skill",
-  npm_package: "npm",
-  pypi_package: "PyPI",
-};
-
-const RISK_COLORS: Record<string, { bg: string; text: string }> = {
-  critical: { bg: "rgba(239,68,68,0.1)", text: "#ef4444" },
-  high: { bg: "rgba(249,115,22,0.1)", text: "#f97316" },
-  medium: { bg: "rgba(234,179,8,0.1)", text: "#eab308" },
-  low: { bg: "rgba(34,197,94,0.1)", text: "#22c55e" },
-  safe: { bg: "rgba(34,197,94,0.1)", text: "#22c55e" },
-};
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  completed: { bg: "rgba(34,197,94,0.1)", text: "#22c55e" },
-  failed: { bg: "rgba(239,68,68,0.1)", text: "#ef4444" },
-  pending: { bg: "rgba(234,179,8,0.1)", text: "#eab308" },
-  running: { bg: "rgba(59,130,246,0.1)", text: "#3b82f6" },
-};
+import { TYPE_LABELS, RISK_COLORS, STATUS_COLORS } from "@/lib/constants";
 
 export default function ScanHistoryTable({ scans, loading, onDelete, deletingId }: { scans: ScanResponse[]; loading: boolean; onDelete?: (id: string) => void; deletingId?: string | null }) {
   const router = useRouter();

@@ -18,7 +18,6 @@ class ScanOptions(BaseModel):
     deep: bool = True
     timeout: int = Field(default=120, ge=1, le=120)
     inline_content: str | None = Field(default=None, max_length=settings.MAX_INLINE_CONTENT_BYTES)
-    ai_api_key: str | None = Field(default=None, max_length=200)
     ai_model: str | None = Field(default=None, max_length=100)
 
     @field_validator("inline_content")

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/lib/theme";
 import AppShell from "@/components/AppShell";
 
 const inter = Inter({
@@ -40,9 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} data-theme="dark" suppressHydrationWarning>
       <body className="antialiased">
-        <ThemeProvider>
-          <AppShell>{children}</AppShell>
-        </ThemeProvider>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

@@ -557,11 +557,6 @@ async def list_scans(
     )
 
 
-@router.get("/health")
-async def health():
-    return {"status": "ok", "service": "mcpeek"}
-
-
 @router.get("/stats", response_model=StatsResponse)
 async def stats(db: AsyncSession = Depends(get_db)):
     total_result = await db.execute(select(func.count(Scan.id)))

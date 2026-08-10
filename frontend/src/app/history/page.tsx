@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, History } from "lucide-react";
 import ScanHistoryTable from "@/components/ScanHistoryTable";
 import ConfirmModal from "@/components/ConfirmModal";
-import { fetchScans, deleteScan } from "@/lib/api";
+import { fetchScans } from "@/lib/api";
+import { useScanDeletion } from "@/hooks/use-scan-deletion";
 import type { ScanResponse } from "@/lib/types";
 
 export default function HistoryPage() {
@@ -13,8 +14,10 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const { deletingId, confirmDeleteId, setConfirmDeleteId, handleDelete: rawHandleDelete } = useScanDeletion((id) => {
+    setScans((prev) => prev.filter((s) => s.scan_id !== id));
+  });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -24,21 +27,6 @@ export default function HistoryPage() {
   }, [page]);
 
   useEffect(() => { load(); }, [load]);
-
-  const handleDelete = async () => {
-    const id = confirmDeleteId;
-    setConfirmDeleteId(null);
-    if (!id) return;
-    setDeletingId(id);
-    try {
-      await deleteScan(id);
-      setScans((prev) => prev.filter((s) => s.scan_id !== id));
-    } catch {
-      // ignore
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   return (
     <div className="px-5 py-6 md:px-8">
@@ -89,7 +77,7 @@ export default function HistoryPage() {
         title="Delete scan"
         message="This scan and all its findings will be permanently deleted. This cannot be undone."
         confirmLabel="Delete"
-        onConfirm={handleDelete}
+        onConfirm={rawHandleDelete}
         onCancel={() => setConfirmDeleteId(null)}
       />
     </div>

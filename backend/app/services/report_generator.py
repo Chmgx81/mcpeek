@@ -12,78 +12,17 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-_RISK_LABELS = {
-    (0, 20): "Safe",
-    (20, 40): "Low",
-    (40, 60): "Medium",
-    (60, 80): "High",
-    (80, 101): "Critical",
-}
-
-
-def _risk_label(score: int) -> str:
-    for (lo, hi), label in _RISK_LABELS.items():
-        if lo <= score < hi:
-            return label
-    return "Safe"
-
-
-_TRUST_LABELS = {
-    (90, 101): "Trusted",
-    (70, 90): "Low concern",
-    (50, 70): "Moderate concern",
-    (25, 50): "High concern",
-    (0, 25): "Untrusted",
-}
-
-
-def _trust_label(score: int) -> str:
-    for (lo, hi), label in _TRUST_LABELS.items():
-        if lo <= score < hi:
-            return label
-    return "Trusted"
-
-
-_SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
-
-
-def _group_by_severity(findings: list[dict]) -> dict[str, list[dict]]:
-    groups: dict[str, list[dict]] = {
-        "critical": [], "high": [], "medium": [], "low": [], "info": [],
-    }
-    for f in findings:
-        sev = f.get("severity", "info")
-        if sev in groups:
-            groups[sev].append(f)
-    for sev in groups:
-        groups[sev].sort(key=lambda x: x.get("title", ""))
-    return groups
-
+from .risk_scorer import compute_trust_score, risk_label, trust_label, group_by_severity, SEVERITY_ORDER
 
 # ---------------------------------------------------------------------------
-# Trust score derivation
+# Helpers — all delegated to risk_scorer.py (single source of truth)
 # ---------------------------------------------------------------------------
 
-def _compute_trust_score(findings: list[dict]) -> int:
-    """Derive trust score from findings (lower is worse)."""
-    trust_cats = {
-        "external_dependencies", "unpinned_packages",
-        "suspicious_domain", "unofficial_source", "typosquatting",
-        "supply_chain", "permissions", "scope_creep",
-    }
-    runtime_cats = {
-        "remote_code_execution", "exfiltration", "system_modification",
-        "execution", "code_execution", "tool_poisoning",
-        "intent_subversion", "context_oversharing",
-    }
-    trust_hits = sum(1 for f in findings if f.get("category") in trust_cats)
-    runtime_hits = sum(1 for f in findings if f.get("category") in runtime_cats)
-    score = max(0, 100 - trust_hits * 15 - runtime_hits * 10)
-    return score
+# Re-export for backward compatibility within this module
+_risk_label = risk_label
+_trust_label = trust_label
+_compute_trust_score = compute_trust_score
+_group_by_severity = group_by_severity
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +106,7 @@ def _generate_attack_scenarios(findings: list[dict]) -> list[dict[str, str]]:
 
     # Sort findings by severity so critical attacks come first
     sorted_findings = sorted(
-        findings, key=lambda f: _SEVERITY_ORDER.get(f.get("severity", "info"), 5)
+        findings, key=lambda f: SEVERITY_ORDER.get(f.get("severity", "info"), 5)
     )
 
     for finding in sorted_findings:

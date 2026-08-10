@@ -82,9 +82,9 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
         overall_risk, risk_level = calculate_risk(all_findings)
         summary = build_summary(all_findings)
 
-        # Run AI analysis if API key provided (user key or backend key)
+        # Run AI analysis if server-side API key is configured
         ai_results = {}
-        ai_key = (request.options.ai_api_key if request.options else None) or settings.OPENROUTER_API_KEY
+        ai_key = settings.OPENROUTER_API_KEY
         if ai_key:
             findings_dicts = [
                 {
