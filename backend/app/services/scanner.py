@@ -13,6 +13,7 @@ from .risk_scorer import build_summary, calculate_risk
 from .skill_scanner import scan_skill
 from .ai_analyzer import run_ai_analysis
 from .ai_detector import detect_with_ai
+from .nim_client import get_nim_client
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,10 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
 
         # AI-native detection: validate, refine, and add to heuristic findings
         ai_key = settings.OPENROUTER_API_KEY
+        nim_client = get_nim_client()
         ai_model = request.options.ai_model or "openai/gpt-oss-20b:free"
-        if ai_key and request.options.ai_detect:
+        use_ai = ai_key or nim_client.available
+        if use_ai and request.options.ai_detect:
             try:
                 raw_content = request.options.inline_content or ""
                 all_findings = await detect_with_ai(
@@ -89,7 +92,7 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
         summary = build_summary(all_findings)
 
         ai_results = {}
-        if ai_key:
+        if use_ai:
             findings_dicts = [
                 {
                     "category": f.category,
@@ -100,15 +103,25 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
                 }
                 for f in all_findings
             ]
-            ai_results = await run_ai_analysis(
-                findings=findings_dicts,
-                target=request.target,
-                target_type=request.target_type.value,
-                risk_score=overall_risk,
-                trust_score=summary.get("trust_score", 100),
-                api_key=ai_key,
-                model=request.options.ai_model if request.options and request.options.ai_model else "openai/gpt-oss-20b:free",
-            )
+            if ai_key:
+                ai_results = await run_ai_analysis(
+                    findings=findings_dicts,
+                    target=request.target,
+                    target_type=request.target_type.value,
+                    risk_score=overall_risk,
+                    trust_score=summary.get("trust_score", 100),
+                    api_key=ai_key,
+                    model=request.options.ai_model if request.options and request.options.ai_model else "openai/gpt-oss-20b:free",
+                )
+            elif nim_client.available:
+                # Use NIM for enrichment when OpenRouter is not configured
+                for f in all_findings[:5]:
+                    enriched = nim_client.analyze_finding(
+                        {"category": f.category, "severity": f.severity, "title": f.title, "description": f.description},
+                        findings_dicts,
+                    )
+                    if "remediation" in enriched:
+                        f.remediation = enriched["remediation"]
 
         duration_ms = int((time.monotonic() - start) * 1000)
 

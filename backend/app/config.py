@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     ALLOW_LOCAL_PATH_SCANS: bool = False
     ALLOW_PRIVATE_NETWORK_SCANS: bool = False
     OPENROUTER_API_KEY: str = ""
+    NVIDIA_NIM_API_KEY: str = ""
+    NVIDIA_NIM_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    AI_MODEL_DETECTION: str = "meta/llama-3.3-70b-instruct"
+    AI_MODEL_ENRICHMENT: str = "nvidia/nemotron-nano-12b-v2"
+    AI_MODEL_DEFENSE: str = "qwen/qwen3-8b"
     SKILLCLOAK_ENTROPY_THRESHOLD: float = 5.5
 
     model_config = {"env_prefix": "MCPEEK_"}

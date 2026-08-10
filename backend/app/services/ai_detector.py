@@ -5,8 +5,10 @@ Unlike ai_analyzer.py (post-scan enrichment), this module:
 2. Confirms or downgrades false positives
 3. Detects attacks that regex patterns miss
 4. Adds new findings with category "ai_detected"
+5. Uses vulnerability database for known CVE matching
+6. Uses NVIDIA NIM free models for detection + defense
 
-Architecture: Heuristics → AI Detector → Refined Findings → Risk Score → AI Enricher
+Architecture: Heuristics → VulnDB Match → AI Detector → Refined Findings → Risk Score → AI Enricher
 """
 
 from __future__ import annotations
@@ -19,6 +21,8 @@ from typing import Any
 import httpx
 
 from ..schemas import FindingCreate
+from .vulnerability_db import get_vulnerability_db, AttackCategory
+from .attack_defense import get_attack_defense, ThreatLevel
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +39,63 @@ def _sanitize(text: str, max_len: int = 800) -> str:
     if len(cleaned) > max_len:
         cleaned = cleaned[:max_len] + "...[truncated]"
     return cleaned
+
+
+def _match_vulnerability_db(content: str) -> list[FindingCreate]:
+    """Check content against the vulnerability database for known CVEs."""
+    db = get_vulnerability_db()
+    findings = []
+
+    # Match attack patterns
+    pattern_matches = db.match_patterns(content)
+    for pattern, matched_text in pattern_matches:
+        findings.append(FindingCreate(
+            category=pattern.category.value,
+            severity=pattern.severity.value,
+            title=f"VulnDB: {pattern.name}",
+            description=pattern.description,
+            evidence=f"Matched: {matched_text[:200]}",
+            remediation=pattern.mitigation,
+            cwe=pattern.cwe,
+            source="heuristic",
+        ))
+
+    # Match known vulnerability patterns
+    vuln_matches = db.match_vulnerability_patterns(content)
+    for vuln, matched_text in vuln_matches:
+        findings.append(FindingCreate(
+            category=vuln.categories[0].value if vuln.categories else "unknown",
+            severity=vuln.severity.value,
+            title=f"CVE: {vuln.cve_id} — {vuln.title}",
+            description=vuln.description,
+            evidence=f"Matched: {matched_text[:200]}",
+            remediation=f"Affects: {', '.join(vuln.affected)}",
+            cwe=", ".join(vuln.cwe) if vuln.cwe else "",
+            source="heuristic",
+        ))
+
+    return findings
+
+
+def _run_attack_defense(content: str, context: str = "") -> list[FindingCreate]:
+    """Run the attack defense layer on content."""
+    defense = get_attack_defense()
+    report = defense.analyze(content, context=context, block_critical=True)
+
+    findings = []
+    for threat in report.threats:
+        findings.append(FindingCreate(
+            category=threat.pattern.category.value,
+            severity=threat.threat_level.value,
+            title=f"Defense: {threat.pattern.name}",
+            description=threat.pattern.description,
+            evidence=f"Threat matched: {threat.matched_text[:200]}",
+            remediation=threat.pattern.mitigation,
+            cwe=threat.pattern.cwe,
+            source="heuristic",
+        ))
+
+    return findings
 
 
 def _build_detection_prompt(content: str, findings: list[dict], target_type: str) -> str:
@@ -212,10 +273,19 @@ async def detect_with_ai(
 ) -> list[FindingCreate]:
     """Run AI detection on content + heuristic findings.
 
+    Pipeline:
+    1. VulnDB + Attack Defense already run by scanner before calling this
+    2. AI-based detection (OpenRouter/NIM for novel threats)
+    3. Merge + deduplicate
+
     Returns refined findings with AI additions.
     Falls back to original findings if AI fails.
     """
+    # If no API key or content, just tag findings and return
     if not api_key or not content:
+        for f in findings:
+            if not f.source:
+                f.source = "heuristic"
         return findings
 
     findings_dicts = [
@@ -234,14 +304,16 @@ async def detect_with_ai(
     if not raw:
         logger.debug("AI detector returned no response")
         for f in findings:
-            f.source = "heuristic"
+            if not f.source:
+                f.source = "heuristic"
         return findings
 
     result = _parse_json(raw)
     if not isinstance(result, dict):
         logger.debug("AI detector returned unparseable response")
         for f in findings:
-            f.source = "heuristic"
+            if not f.source:
+                f.source = "heuristic"
         return findings
 
     refinements = result.get("refinements", [])
@@ -251,7 +323,7 @@ async def detect_with_ai(
     refined = _apply_additions(refined, additions)
 
     logger.info(
-        "AI detector: %d refinements, %d additions → %d total findings",
+        "AI detector: %d AI refinements, %d additions → %d total findings",
         len(refinements), len(additions), len(refined),
     )
 
