@@ -3,16 +3,16 @@
 import { useCountUp } from "@/hooks/use-count-up";
 
 export default function StatsBar() {
-  const s1 = useCountUp(15, 1200);
-  const s2 = useCountUp(5, 1200);
-  const s3 = useCountUp(3, 1200);
-  const s4 = useCountUp(4, 1200);
+  const s1 = useCountUp(22, 1200);
+  const s2 = useCountUp(198, 1200);
+  const s3 = useCountUp(20, 1200);
+  const s4 = useCountUp(13, 1200);
 
   const stats = [
-    { ref: s1.ref, value: s1.count, suffix: "+", label: "Threat categories", color: "#22c55e" },
-    { ref: s2.ref, value: s2.count, suffix: "", label: "Demo fixtures", color: "#eab308" },
-    { ref: s3.ref, value: s3.count, suffix: "", label: "Export formats", color: "#3b82f6" },
-    { ref: s4.ref, value: s4.count, suffix: "", label: "Scan stages", color: "#a855f7" },
+    { ref: s1.ref, value: s1.count, suffix: "", label: "Known CVEs", color: "#22c55e" },
+    { ref: s2.ref, value: s2.count, suffix: "", label: "Tests passing", color: "#eab308" },
+    { ref: s3.ref, value: s3.count, suffix: "/20", label: "Adversarial attacks blocked", color: "#3b82f6" },
+    { ref: s4.ref, value: s4.count, suffix: "", label: "Free AI models", color: "#a855f7" },
   ];
 
   return (

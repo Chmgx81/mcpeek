@@ -8,13 +8,15 @@ export default function ComparisonTable() {
     { name: "Agent skill analysis", mcpeek: true, generic: false, traditional: false },
     { name: "Runtime content inspection", mcpeek: true, generic: false, traditional: true },
     { name: "Trust score calculation", mcpeek: true, generic: false, traditional: false },
-    { name: "AI attack analysis (optional)", mcpeek: true, generic: false, traditional: false },
+    { name: "AI threat detection (NIM)", mcpeek: true, generic: false, traditional: false },
+    { name: "Agent defense system", mcpeek: true, generic: false, traditional: false },
     { name: "Prompt injection detection", mcpeek: true, generic: true, traditional: false },
     { name: "Tool poisoning detection (MCP03)", mcpeek: true, generic: false, traditional: false },
     { name: "Scope creep detection (MCP02)", mcpeek: true, generic: false, traditional: false },
     { name: "Intent subversion detection (MCP06)", mcpeek: true, generic: false, traditional: false },
     { name: "SKILLCLOAK / SFS detection", mcpeek: true, generic: false, traditional: false },
     { name: "Supply chain analysis", mcpeek: true, generic: true, traditional: true },
+    { name: "Adversarial attack resistance", mcpeek: true, generic: false, traditional: false },
     { name: "Open source / free", mcpeek: true, generic: true, traditional: false },
   ];
 

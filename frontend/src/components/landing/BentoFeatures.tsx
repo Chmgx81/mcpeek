@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, FileSearch, Globe, Lock, ShieldCheck, Fingerprint, AlertOctagon } from "lucide-react";
+import { ArrowRight, FileSearch, Globe, Lock, ShieldCheck, Fingerprint, AlertOctagon, Bot } from "lucide-react";
 
 export default function BentoFeatures() {
   const features = [
@@ -17,20 +17,20 @@ export default function BentoFeatures() {
       accent: "#3b82f6",
     },
     {
+      title: "Agent Defense",
+      desc: "Active protection against adversarial attacks: Unicode homoglyphs, Base64 injections, social engineering, tool abuse, and supply chain threats. 20/20 attack scenarios blocked.",
+      icon: Bot,
+      accent: "#0891b2",
+    },
+    {
       title: "SKILLCLOAK Defense",
       desc: "Detects self-extracting skills (SFS) that hide payloads in hidden directories and unpack at runtime. Catches entropy, decoder patterns, and manifest abuse.",
       icon: Fingerprint,
       accent: "#f97316",
     },
     {
-      title: "Trust Scoring",
-      desc: "Heuristic risk scoring based on dependency analysis, domain reputation, and supply chain signals.",
-      icon: Lock,
-      accent: "#a855f7",
-    },
-    {
-      title: "AI Attack Analysis",
-      desc: "Optional AI-powered dynamic attack scenarios, threat intelligence mapping, and actionable remediation suggestions via OpenRouter.",
+      title: "AI Threat Detection",
+      desc: "3-layer pipeline: Vulnerability database (22 CVEs) → Attack defense heuristics → NVIDIA NIM AI analysis with 13 free models.",
       icon: ShieldCheck,
       accent: "#ef4444",
     },
