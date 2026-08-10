@@ -12,7 +12,7 @@ SUSPICIOUS_CONTENT_TYPES = {"application/x-executable", "application/x-msdownloa
 SUSPICIOUS_EXTENSIONS = {".exe", ".bat", ".cmd", ".ps1", ".sh", ".dll", ".so", ".dylib"}
 
 
-async def analyze_urls(urls: list[str], timeout: int = 15) -> list[FindingCreate]:
+async def analyze_urls(urls: list[str], timeout: int = 15) -> tuple[list[FindingCreate], int]:
     findings: list[FindingCreate] = []
     checked = 0
 

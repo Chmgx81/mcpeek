@@ -182,7 +182,7 @@ def _check_mcp_config(manifest: dict | None, source: str) -> list[FindingCreate]
                         tool_name = tool.get("name", "unknown")
                         tool_desc = tool.get("description", "")
                         for perm_key, severity in DANGEROUS_PERMISSIONS.items():
-                            if perm_key in str(tool).lower() or perm_key in tool_desc.lower():
+                            if perm_key in tool_name.lower() or perm_key in tool_desc.lower():
                                 findings.append(
                                     FindingCreate(
                                         category="permissions",

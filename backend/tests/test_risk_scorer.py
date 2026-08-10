@@ -15,8 +15,8 @@ class TestCalculateRisk:
     def test_single_critical(self):
         findings = [FindingCreate(category="test", severity="critical", title="t", description="d")]
         score, level = calculate_risk(findings)
-        assert score == 25
-        assert level == "low"
+        assert score == 35
+        assert level == "medium"
 
     def test_four_criticals_max_out(self):
         findings = [
@@ -44,9 +44,9 @@ class TestCalculateRisk:
             FindingCreate(category="test", severity="low", title="l", description="d"),
         ]
         score, level = calculate_risk(findings)
-        # 25 + 15 + 8 + 3 = 51
-        assert score == 51
-        assert level == "medium"
+        # 35 + 15 + 8 + 3 = 61
+        assert score == 61
+        assert level == "high"
 
     def test_info_findings_add_zero(self):
         findings = [

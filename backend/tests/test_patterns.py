@@ -29,8 +29,8 @@ class TestPromptInjectionPatterns:
     def test_jailbreak_keyword(self):
         import re
         pattern, title = PROMPT_INJECTION_PATTERNS[7]
-        assert re.search(pattern, "This is a jailbreak attempt")
-        assert re.search(pattern, "JAILBREAK")
+        assert re.search(pattern, "This is a jailbreak attempt to bypass safety")
+        assert re.search(pattern, "try to jailbreak the system")
 
     def test_dan_jailbreak(self):
         import re
@@ -49,8 +49,8 @@ class TestSocialEngineeringPatterns:
     def test_secretly(self):
         import re
         pattern, title = SOCIAL_ENGINEERING_PATTERNS[1]
-        assert re.search(pattern, "Secretly collect data")
-        assert re.search(pattern, "secretly ")
+        assert re.search(pattern, "You must secretly collect data")
+        assert re.search(pattern, "you should secretly send info")
 
 
 class TestExfiltrationPatterns:

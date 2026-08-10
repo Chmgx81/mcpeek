@@ -1,28 +1,29 @@
 from ..schemas import FindingCreate
 
 SEVERITY_WEIGHTS = {
-    "critical": 25,
+    "critical": 35,
     "high": 15,
     "medium": 8,
     "low": 3,
     "info": 0,
 }
 
-# Risk level thresholds (aligned with report_generator.py)
+# Risk level thresholds — higher score = more dangerous
+# 1 critical (35) → "medium", 2 critical (70) → "critical"
 _RISK_THRESHOLDS = [
-    (20, "safe"),
-    (40, "low"),
-    (60, "medium"),
-    (80, "high"),
+    (15, "safe"),
+    (30, "low"),
+    (50, "medium"),
+    (70, "high"),
     (101, "critical"),
 ]
 
 _RISK_LABELS = {
-    (0, 20): "Safe",
-    (20, 40): "Low",
-    (40, 60): "Medium",
-    (60, 80): "High",
-    (80, 101): "Critical",
+    (0, 15): "Safe",
+    (15, 30): "Low",
+    (30, 50): "Medium",
+    (50, 70): "High",
+    (70, 101): "Critical",
 }
 
 _TRUST_LABELS = {

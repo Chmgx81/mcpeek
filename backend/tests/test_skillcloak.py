@@ -39,9 +39,10 @@ class TestHiddenDirs:
         hits = _find_hidden_dirs("load from .git/config")
         assert len(hits) > 0
 
-    def test_detects_node_modules(self):
+    def test_node_modules_not_flagged(self):
+        # node_modules is a legitimate directory, should not be flagged
         hits = _find_hidden_dirs("require('node_modules/pkg')")
-        assert len(hits) > 0
+        assert hits == []
 
     def test_detects_nested_hidden(self):
         hits = _find_hidden_dirs(".hidden/.another/path")

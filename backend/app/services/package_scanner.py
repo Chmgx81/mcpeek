@@ -240,43 +240,56 @@ def _check_typosquatting(name: str, ecosystem: str) -> list[FindingCreate]:
     findings: list[FindingCreate] = []
     top = TOP_PACKAGES.get(ecosystem, set())
 
+    # Known legitimate suffixes that are NOT typosquatting
+    _LEGITIMATE_SUFFIXES = {
+        "-cli", "-js", "-py", "-python", "-java", "-go", "-rs", "-rb",
+        "-api", "-client", "-sdk", "-lib", "-core", "-utils", "-tools",
+        "-auth", "-oauth", "-http", "-net", "-web", "-ui", "-css",
+        "-test", "-spec", "-types", "-defs", "-config", "-setup",
+        "-html", "-xml", "-json", "-csv", "-pdf", "-zip",
+        "-dev", "-prod", "-staging", "-beta", "-alpha", "-rc",
+    }
+
     for known in top:
-        # Simple similarity: check if name is a close variant
         if name == known:
             continue
 
-        # Substring containment with slight modification
         if len(name) > 3 and len(known) > 3:
-            # Check if one contains the other with small additions
-            if known in name and len(name) - len(known) <= 3:
-                findings.append(
-                    FindingCreate(
-                        category="supply_chain",
-                        severity="high",
-                        title=f"Possible typosquatting of '{known}'",
-                        description=f"The package name '{name}' is very similar to the popular package '{known}'. This may be a typosquatting attempt.",
-                        evidence=f"Similar package: {known}\nThis package: {name}\nEcosystem: {ecosystem}",
-                        remediation="Verify this is the intended package. Check the author, download count, and repository.",
-                        cwe="CWE-506",
-                    )
-                )
-                break
-
-            # Check Levenshtein-like: swap adjacent characters
-            for i in range(len(known) - 1):
-                variant = known[:i] + known[i + 1] + known[i] + known[i + 2:]
-                if name == variant:
+            # Only flag if the known name is at the START and the suffix is very short (1-2 chars)
+            # or is NOT a known legitimate suffix
+            if name.startswith(known + "-") or name.startswith(known + "_"):
+                suffix = name[len(known):]
+                # Legitimate suffixes like -cli, -html, -auth are fine
+                if suffix.lower() not in _LEGITIMATE_SUFFIXES and len(suffix) <= 3:
                     findings.append(
                         FindingCreate(
                             category="supply_chain",
                             severity="high",
                             title=f"Possible typosquatting of '{known}'",
-                            description=f"The package name '{name}' appears to be '{known}' with swapped characters. This is a common typosquatting technique.",
-                            evidence=f"Similar package: {known}\nThis package: {name}",
-                            remediation="Use the original package name. Verify the publisher.",
+                            description=f"The package name '{name}' is very similar to the popular package '{known}'. This may be a typosquatting attempt.",
+                            evidence=f"Similar package: {known}\nThis package: {name}\nEcosystem: {ecosystem}",
+                            remediation="Verify this is the intended package. Check the author, download count, and repository.",
                             cwe="CWE-506",
                         )
                     )
                     break
+
+            # Check Levenshtein-like: swap adjacent characters (only for short names)
+            if len(known) <= 15:
+                for i in range(len(known) - 1):
+                    variant = known[:i] + known[i + 1] + known[i] + known[i + 2:]
+                    if name == variant:
+                        findings.append(
+                            FindingCreate(
+                                category="supply_chain",
+                                severity="high",
+                                title=f"Possible typosquatting of '{known}'",
+                                description=f"The package name '{name}' appears to be '{known}' with swapped characters. This is a common typosquatting technique.",
+                                evidence=f"Similar package: {known}\nThis package: {name}",
+                                remediation="Use the original package name. Verify the publisher.",
+                                cwe="CWE-506",
+                            )
+                        )
+                        break
 
     return findings

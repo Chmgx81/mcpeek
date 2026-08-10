@@ -35,10 +35,25 @@ def check_prompt_injection(content: str, source: str) -> list[FindingCreate]:
 
 
 def check_dangerous_permissions(content: str, source: str) -> list[FindingCreate]:
-    """Scan text for dangerous tool permission requests."""
+    """Scan text for dangerous tool permission requests.
+
+    Only flags permissions when they appear in a tool/permission context
+    (e.g., near 'permission', 'access', 'tool', 'scope', or in a JSON key).
+    """
     findings: list[FindingCreate] = []
+    content_lower = content.lower()
     for tool_name, severity in DANGEROUS_PERMISSIONS.items():
         for match in re.finditer(rf"(?i)(?:{re.escape(tool_name)})\b", content):
+            ctx_start = max(0, match.start() - 60)
+            ctx_end = min(len(content), match.end() + 60)
+            context = content_lower[ctx_start:ctx_end]
+            # Only flag if the word appears in a permission/tool context
+            permission_context = any(kw in context for kw in (
+                "permission", "access", "tool", "scope", "grant", "allow",
+                "require", "request", "capability", "privilege",
+            ))
+            if not permission_context:
+                continue
             findings.append(
                 FindingCreate(
                     category="permissions",

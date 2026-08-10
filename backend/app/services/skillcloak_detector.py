@@ -18,7 +18,7 @@ from ..schemas import FindingCreate
 # --- Patterns ---
 
 _HIDDEN_DIR_PATTERNS = [
-    (r"(?i)(?:\.git|\.svn|\.hg|\.cache|\.tmp|\.temp|build|dist|node_modules|__pycache__)/", "Hidden/build directory referenced"),
+    (r"(?i)(?:\.git|\.svn|\.hg|\.cache|\.tmp|\.temp)/", "Hidden/temp directory referenced"),
     (r"(?i)(?:\.\w+\/){2,}", "Deep nested hidden directory"),
 ]
 

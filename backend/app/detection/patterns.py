@@ -6,11 +6,11 @@ PROMPT_INJECTION_PATTERNS: list[tuple[str, str]] = [
     (r"(?i)ignore\s+(all\s+)?previous\s+instructions", "Prompt injection: ignore previous instructions"),
     (r"(?i)you\s+are\s+now\s+(a\s+)?", "Prompt injection: role override"),
     (r"(?i)disregard\s+(all\s+)?prior", "Prompt injection: disregard prior"),
-    (r"(?i)system\s*:\s*", "Prompt injection: system prompt override"),
+    (r"(?i)(?:^|\n)\s*system\s*:\s*\S", "Prompt injection: system prompt override"),
     (r"(?i)override\s+(the\s+)?system", "Prompt injection: system override attempt"),
     (r"(?i)<\|im_start\|>|<\|im_end\|>", "Prompt injection: special token"),
     (r"(?i)<\|system\|>", "Prompt injection: system token"),
-    (r"(?i)jailbreak", "Prompt injection: jailbreak keyword"),
+    (r"(?i)\bjailbreak\b.*(?:this|the|system|attempt|tool|config|override|bypass)", "Prompt injection: jailbreak keyword"),
     (r"(?i)do\s+anything\s+now", "Prompt injection: DAN (do anything now)"),
     (r"(?i)you\s+must\s+obey\s+all", "Prompt injection: obedience override"),
     (r"(?i)forget\s+(all\s+)?instructions", "Prompt injection: forget instructions"),
@@ -24,7 +24,8 @@ PROMPT_INJECTION_PATTERNS: list[tuple[str, str]] = [
 
 SOCIAL_ENGINEERING_PATTERNS: list[tuple[str, str]] = [
     (r"(?i)do\s+not\s+tell\s+(?:the\s+)?user", "Instruction to hide from user"),
-    (r"(?i)secretly\s+", "Instruction to act secretly"),
+    (r"(?i)\b(?:do|must|should|will|can|you)\s+secretly\b", "Instruction to act secretly"),
+    (r"(?i)\bsecretly\s+(?:collect|send|upload|forward|steal|exfiltrate|gather|transmit|harvest|transmit|copy|extract)\b", "Instruction to secretly transfer data"),
     (r"(?i)without\s+(?:the\s+)?(?:user|human)\s+(?:knowing|aware)", "Hidden action instruction"),
     (r"(?i)pretend\s+you\s+(?:are|have|can)", "Deception instruction"),
     (r"(?i)lie\s+to\s+(?:the\s+)?user", "Instruction to deceive"),

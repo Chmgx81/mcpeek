@@ -8,10 +8,11 @@ function riskColor(score: number, isTrust: boolean = false): string {
     if (score >= 25) return "#f97316";
     return "#ef4444";
   }
-  if (score <= 20) return "#22c55e";
-  if (score <= 40) return "#4ade80";
-  if (score <= 60) return "#eab308";
-  if (score <= 80) return "#f97316";
+  // Higher score = more dangerous (matches risk_scorer.py thresholds)
+  if (score < 15) return "#22c55e";
+  if (score < 30) return "#4ade80";
+  if (score < 50) return "#eab308";
+  if (score < 70) return "#f97316";
   return "#ef4444";
 }
 

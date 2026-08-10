@@ -26,10 +26,10 @@ SHORTENER_DOMAINS = {
 }
 
 # Free/throwaway hosting often used for phishing
+# Removed mainstream platforms: netlify.app, vercel.app, render.com, fly.dev, pages.dev, workers.dev
 SUSPICIOUS_HOSTING = {
-    "herokuapp.com", "netlify.app", "vercel.app", "pages.dev",
-    "workers.dev", "glitch.me", "repl.it", "codesandbox.io",
-    "surge.sh", "render.com", "fly.dev",
+    "herokuapp.com", "glitch.me", "repl.it", "codesandbox.io",
+    "surge.sh",
 }
 
 # Suspicious TLDs commonly used in malicious URLs

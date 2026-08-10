@@ -8,6 +8,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from ..schemas.scan import FindingCreate
+from ..services.risk_scorer import calculate_risk
 from .injection import (
     check_dangerous_permissions,
     check_exfiltration,
@@ -64,36 +65,6 @@ class ScanResult:
         }
 
 
-# Risk scoring: start at 100, deduct per finding
-SEVERITY_DEDUCTION: dict[str, int] = {
-    "critical": 25,
-    "high": 15,
-    "medium": 8,
-    "low": 3,
-    "info": 0,
-}
-
-
-def _calculate_score(findings: list[FindingCreate]) -> tuple[int, str]:
-    """Start at 100, deduct per finding, floor at 0."""
-    score = 100
-    for f in findings:
-        score -= SEVERITY_DEDUCTION.get(f.severity, 0)
-    score = max(score, 0)
-
-    if score >= 90:
-        level = "safe"
-    elif score >= 70:
-        level = "low"
-    elif score >= 50:
-        level = "medium"
-    elif score >= 25:
-        level = "high"
-    else:
-        level = "critical"
-    return score, level
-
-
 def scan_content(
     content: str,
     target_name: str = "unknown",
@@ -139,7 +110,7 @@ def scan_content(
     all_findings.extend(check_exfiltration(text, target_name))
     all_findings.extend(check_hidden_instructions(text, target_name))
 
-    risk_score, risk_level = _calculate_score(all_findings)
+    risk_score, risk_level = calculate_risk(all_findings)
 
     return ScanResult(
         scan_id=str(uuid.uuid4()),
