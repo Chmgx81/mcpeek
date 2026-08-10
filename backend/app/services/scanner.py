@@ -1,11 +1,10 @@
 import json
 import logging
 import time
+import uuid
+from datetime import datetime, timezone
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from ..models import Finding, Scan
+from ..database import fetch_one, execute
 from ..schemas import FindingCreate, ScanRequest, TargetType
 from .content_hash import compare_hashes, hashes_from_json
 from .mcp_scanner import scan_mcp_server
@@ -18,24 +17,15 @@ from ..config import settings
 logger = logging.getLogger(__name__)
 
 
-async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None:
+async def run_scan(scan_id: str, request: ScanRequest) -> None:
     start = time.monotonic()
 
     try:
-        # Update status to running
-        result = await db.execute(select(Scan).where(Scan.id == scan_id))
-        scan = result.scalar_one()
-        scan.status = "running"
-        await db.commit()
+        await execute("UPDATE scans SET status = 'running' WHERE id = ?", [scan_id])
 
-        # Run appropriate scanner
         all_findings: list[FindingCreate] = []
         metadata: dict = {"files_analyzed": 0, "urls_checked": 0, "deps_analyzed": 0}
         content_hashes: dict[str, str] = {}
-
-        # Inline pasted scans do not store the original content. For re-scans,
-        # the inline_content is now stored in the DB and passed via the request,
-        # so we can re-run the full scan and compare hashes afterwards.
 
         if request.target_type == TargetType.MCP_SERVER:
             findings, meta = await scan_mcp_server(
@@ -65,24 +55,19 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
         else:
             raise ValueError(f"Unsupported target type: {request.target_type}")
 
-        # --- Re-scan comparison ---
         content_hashes = meta.get("content_hashes", {})
         if request.rescan_of and content_hashes:
-            prev_result = await db.execute(select(Scan).where(Scan.id == request.rescan_of))
-            prev_scan = prev_result.scalar_one_or_none()
+            prev_scan = await fetch_one("SELECT * FROM scans WHERE id = ?", [request.rescan_of])
             if prev_scan:
-                old_hashes = hashes_from_json(prev_scan.content_hashes_json or "{}")
+                old_hashes = hashes_from_json(prev_scan.get("content_hashes_json") or "{}")
                 changes = _append_hash_change_findings(all_findings, old_hashes, content_hashes)
                 if changes:
-                    # Escalate risk if content changed
                     metadata["content_changed"] = True
                     metadata["changed_urls"] = [c["url"] for c in changes]
 
-        # Calculate risk
         overall_risk, risk_level = calculate_risk(all_findings)
         summary = build_summary(all_findings)
 
-        # Run AI analysis if server-side API key is configured
         ai_results = {}
         ai_key = settings.OPENROUTER_API_KEY
         if ai_key:
@@ -108,57 +93,55 @@ async def run_scan(scan_id: str, request: ScanRequest, db: AsyncSession) -> None
 
         duration_ms = int((time.monotonic() - start) * 1000)
 
-        # Save findings to DB
+        # Insert findings
         for f in all_findings:
-            db_finding = Finding(
-                scan_id=scan_id,
-                category=f.category,
-                severity=f.severity,
-                title=f.title,
-                description=f.description,
-                evidence=f.evidence,
-                remediation=f.remediation,
-                cwe=f.cwe,
-                owasp=f.owasp,
-                references_json=json.dumps(f.references),
+            finding_id = str(uuid.uuid4())
+            await execute(
+                """INSERT INTO findings (id, scan_id, category, severity, title, description, evidence, remediation, cwe, owasp, references_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                [finding_id, scan_id, f.category, f.severity, f.title, f.description,
+                 f.evidence, f.remediation, f.cwe, f.owasp, json.dumps(f.references)],
             )
-            db.add(db_finding)
 
         # Update scan
         from .content_hash import hashes_to_json
-        scan.status = "completed"
-        scan.overall_risk = overall_risk
-        scan.risk_level = risk_level
-        scan.summary_json = json.dumps(summary)
-        scan.scan_duration_ms = duration_ms
-        scan.files_analyzed = metadata.get("files_analyzed", 0)
-        scan.urls_checked = metadata.get("urls_checked", 0)
-        scan.deps_analyzed = metadata.get("deps_analyzed", 0)
-        scan.content_hashes_json = hashes_to_json(content_hashes) if content_hashes else "{}"
-        scan.ai_json = json.dumps(ai_results) if ai_results else "{}"
-        if request.rescan_of:
-            scan.rescan_of = request.rescan_of
-
-        await db.commit()
+        await execute(
+            """UPDATE scans SET
+                status = 'completed',
+                overall_risk = ?,
+                risk_level = ?,
+                summary_json = ?,
+                scan_duration_ms = ?,
+                files_analyzed = ?,
+                urls_checked = ?,
+                deps_analyzed = ?,
+                content_hashes_json = ?,
+                ai_json = ?,
+                rescan_of = COALESCE(rescan_of, ?)
+            WHERE id = ?""",
+            [overall_risk, risk_level, json.dumps(summary), duration_ms,
+             metadata.get("files_analyzed", 0), metadata.get("urls_checked", 0),
+             metadata.get("deps_analyzed", 0),
+             hashes_to_json(content_hashes) if content_hashes else "{}",
+             json.dumps(ai_results) if ai_results else "{}",
+             request.rescan_of, scan_id],
+        )
 
     except Exception as e:
         logger.exception("Scan %s failed", scan_id)
         duration_ms = int((time.monotonic() - start) * 1000)
         try:
-            result = await db.execute(select(Scan).where(Scan.id == scan_id))
-            scan = result.scalar_one()
-            scan.status = "failed"
-            scan.error_message = f"{type(e).__name__}: scan failed"
-            scan.scan_duration_ms = duration_ms
-            await db.commit()
+            await execute(
+                "UPDATE scans SET status = 'failed', error_message = ?, scan_duration_ms = ? WHERE id = ?",
+                [f"{type(e).__name__}: scan failed", duration_ms, scan_id],
+            )
         except Exception:
-            await db.rollback()
+            pass
 
 
 def _merge_metadata(target: dict, source: dict) -> None:
     for key in ("files_analyzed", "urls_checked", "deps_analyzed"):
         target[key] = target.get(key, 0) + source.get(key, 0)
-    # Preserve content hashes and dependency risk score
     if "content_hashes" in source:
         target["content_hashes"] = source["content_hashes"]
     if "dependency_risk_score" in source:

@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://frontend-lake-eight-70.vercel.app">Live Demo</a> ·
-  <a href="https://mcpeek-api-production.up.railway.app/docs">API</a> ·
+  <a href="https://mcpeek-backend.vercel.app/docs">API</a> ·
   <a href="https://github.com/Chmgx81/mcpeek">GitHub</a> ·
   <a href="https://youtu.be/mQXrpGpstA8">Video</a> ·
   <a href="https://rootmazex.hashnode.com/mcpeek-catching-security-threats-in-mcp-servers-before-they-execute">Blog</a>
@@ -142,7 +142,7 @@ Optional deep analysis using free OpenRouter models (no credit card required):
 | `GET` | `/api/v1/scans` | List scans (paginated) |
 | `GET` | `/api/v1/stats` | Dashboard statistics |
 
-Full interactive docs at **[/docs](https://mcpeek-api-production.up.railway.app/docs)**.
+Full interactive docs at **[/docs](https://mcpeek-backend.vercel.app/docs)**.
 
 ---
 
@@ -194,10 +194,10 @@ Report (risk score, findings, export in JSON/Markdown/Text)
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.12, FastAPI, SQLAlchemy, SQLite |
+| Backend | Python 3.12, FastAPI, Turso (libSQL cloud) |
 | Frontend | Next.js, React, Tailwind CSS |
 | AI Analysis | OpenRouter (free models) |
-| Deployment | Railway (API) + Vercel (frontend) |
+| Deployment | Vercel (frontend + backend serverless) |
 | CI/CD | GitHub Actions |
 
 ---
@@ -217,6 +217,8 @@ Report (risk score, findings, export in JSON/Markdown/Text)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `MCPEEK_TURSO_DATABASE_URL` | — | Turso database URL (`libsql://...`) |
+| `MCPEEK_TURSO_AUTH_TOKEN` | — | Turso authentication token |
 | `MCPEEK_CORS_ORIGINS` | `http://localhost:3000` | Allowed CORS origins |
 | `MCPEEK_RATE_LIMIT_PER_MINUTE` | `10` | Max scans per IP per minute |
 | `MCPEEK_ALLOW_LOCAL_PATH_SCANS` | `false` | Allow local file path scanning |

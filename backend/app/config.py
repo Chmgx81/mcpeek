@@ -3,6 +3,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./mcpeek.db"
+    TURSO_DATABASE_URL: str = ""
+    TURSO_AUTH_TOKEN: str = ""
     MAX_TARGET_LENGTH: int = 2048
     MAX_INLINE_CONTENT_BYTES: int = 500_000
     MAX_REMOTE_BYTES: int = 1_000_000
@@ -19,3 +21,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Allow separate TURSO_DATABASE_URL + TURSO_AUTH_TOKEN (Turso convention)
+if settings.TURSO_DATABASE_URL and not settings.DATABASE_URL.startswith("libsql"):
+    token_suffix = f"?authToken={settings.TURSO_AUTH_TOKEN}" if settings.TURSO_AUTH_TOKEN else ""
+    settings.DATABASE_URL = f"{settings.TURSO_DATABASE_URL}{token_suffix}"
