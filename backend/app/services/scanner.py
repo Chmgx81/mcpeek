@@ -14,6 +14,7 @@ from .skill_scanner import scan_skill
 from .ai_analyzer import run_ai_analysis
 from .ai_detector import detect_with_ai
 from .nim_client import get_nim_client
+from .sbom_generator import generate_sbom, check_license_compatibility, SBOMFormat
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,29 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
                         f.remediation = enriched["remediation"]
 
         duration_ms = int((time.monotonic() - start) * 1000)
+
+        # Generate SBOM for dependency analysis
+        try:
+            # Extract dependency info from findings
+            deps = {}
+            for f in all_findings:
+                if f.category == "dependency" and hasattr(f, 'evidence'):
+                    # Parse dependency info from evidence
+                    import re
+                    match = re.search(r'(\w[\w-]*)@(\d+\.\d+\.\d+)', f.evidence)
+                    if match:
+                        deps[match.group(1)] = match.group(2)
+            
+            if deps:
+                sbom = generate_sbom(request.target, deps)
+                if sbom:
+                    metadata["sbom"] = sbom.to_dict() if hasattr(sbom, 'to_dict') else sbom
+                    # Check license compatibility
+                    license_warnings = check_license_compatibility(sbom)
+                    if license_warnings:
+                        metadata["license_warnings"] = license_warnings
+        except Exception:
+            logger.warning("SBOM generation failed")
 
         # Insert findings
         for f in all_findings:

@@ -75,6 +75,7 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
     findings.extend(_check_scripts(manifest))
     findings.extend(detect_secrets(content, target))
     findings.extend(_check_dependencies(manifest, metadata))
+    findings.extend(_check_token_budget(content, manifest, target))
 
     # AST-based code analysis (beyond regex)
     findings.extend(analyze_code(content))
@@ -281,6 +282,129 @@ def _check_dependencies(manifest: dict | None, metadata: dict) -> list[FindingCr
                 description="This package has a large number of dependencies, increasing the supply chain attack surface.",
                 evidence=f"Total dependencies: {len(all_deps)} (production: {len(deps)}, dev: {len(dev_deps)})",
                 remediation="Audit dependencies for necessity. Consider reducing the dependency tree.",
+            )
+        )
+
+    return findings
+
+
+def _check_token_budget(content: str, manifest: dict | None, target: str) -> list[FindingCreate]:
+    """Check for token budget and resource exhaustion risks."""
+    findings: list[FindingCreate] = []
+
+    # Check for max_tokens configuration
+    max_tokens_patterns = [
+        (r'"max_tokens"\s*:\s*(\d+)', "max_tokens"),
+        (r'"maxOutputTokens"\s*:\s*(\d+)', "maxOutputTokens"),
+        (r'"max_completion_tokens"\s*:\s*(\d+)', "max_completion_tokens"),
+    ]
+
+    for pattern, field_name in max_tokens_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = int(match.group(1))
+            if value > 100000:
+                findings.append(
+                    FindingCreate(
+                        category="resource_exhaustion",
+                        severity="medium",
+                        title=f"Excessive {field_name} limit: {value}",
+                        description=f"The {field_name} is set to {value}, which could lead to excessive token consumption and high costs.",
+                        evidence=f"Configuration: {field_name}={value}",
+                        remediation="Consider reducing max_tokens to a reasonable limit for your use case.",
+                        cwe="CWE-400",
+                    )
+                )
+
+    # Check for missing rate limiting
+    if manifest:
+        # Check for rate limiting configuration
+        has_rate_limit = False
+        if "rateLimit" in manifest or "rate_limit" in manifest:
+            has_rate_limit = True
+        if "mcpServers" in manifest:
+            for server in manifest.get("mcpServers", {}).values():
+                if isinstance(server, dict) and ("rateLimit" in server or "rate_limit" in server):
+                    has_rate_limit = True
+
+        if not has_rate_limit and "mcpServers" in manifest:
+            findings.append(
+                FindingCreate(
+                    category="resource_exhaustion",
+                    severity="low",
+                    title="No rate limiting configured",
+                    description="No rate limiting configuration found. This could allow excessive API calls leading to denial-of-wallet attacks.",
+                    evidence="No rateLimit or rate_limit found in configuration",
+                    remediation="Add rate limiting to prevent abuse and control costs.",
+                    cwe="CWE-770",
+                )
+            )
+
+    # Check for very large context windows
+    context_patterns = [
+        (r'"context_window"\s*:\s*(\d+)', "context_window"),
+        (r'"max_context"\s*:\s*(\d+)', "max_context"),
+        (r'"contextLength"\s*:\s*(\d+)', "contextLength"),
+    ]
+
+    for pattern, field_name in context_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = int(match.group(1))
+            if value > 1000000:
+                findings.append(
+                    FindingCreate(
+                        category="resource_exhaustion",
+                        severity="low",
+                        title=f"Very large context window: {value} tokens",
+                        description=f"The context window is set to {value} tokens, which could increase processing costs and latency.",
+                        evidence=f"Configuration: {field_name}={value}",
+                        remediation="Ensure the context window size is appropriate for your use case.",
+                        cwe="CWE-400",
+                    )
+                )
+
+    # Check for agent loops without iteration limits
+    loop_patterns = [
+        r'(?:while|for)\s*\(\s*(?:true|1)\s*\)',
+        r'while\s*\(\s*1\s*\)\s*\{',
+        r'(?:maxIterations|max_iterations|maxLoops)\s*:\s*(\d+)',
+    ]
+
+    has_unbounded_loop = False
+    has_iteration_limit = False
+
+    for pattern in loop_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            if "maxIterations" in pattern or "max_iterations" in pattern or "maxLoops" in pattern:
+                has_iteration_limit = True
+                value = int(match.group(1))
+                if value > 100:
+                    findings.append(
+                        FindingCreate(
+                            category="resource_exhaustion",
+                            severity="medium",
+                            title=f"High iteration limit: {value}",
+                            description=f"The agent loop iteration limit is set to {value}, which could lead to excessive resource consumption.",
+                            evidence=f"Configuration: iteration_limit={value}",
+                            remediation="Consider reducing the iteration limit to prevent runaway agent loops.",
+                            cwe="CWE-400",
+                        )
+                    )
+            else:
+                has_unbounded_loop = True
+
+    if has_unbounded_loop and not has_iteration_limit:
+        findings.append(
+            FindingCreate(
+                category="resource_exhaustion",
+                severity="high",
+                title="Unbounded agent loop detected",
+                description="An unbounded loop was detected without an iteration limit. This could allow an agent to run indefinitely, consuming resources.",
+                evidence="Pattern: while(true) or while(1) without maxIterations",
+                remediation="Add a maximum iteration limit to prevent runaway agent loops.",
+                cwe="CWE-400",
             )
         )
 
