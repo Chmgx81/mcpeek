@@ -1,5 +1,5 @@
 name: MCPeek Security Scan
-description: Scan MCP configs and AI agent skills for prompt injection, shell execution, secrets, and risky permissions. Outputs SARIF for GitHub Security tab integration.
+description: Scan MCP configs and AI agent skills for prompt injection, shell execution, secrets, and risky permissions. Features agent defense against adversarial attacks. Outputs SARIF for GitHub Security tab integration.
 branding:
   icon: shield
   color: green
@@ -20,6 +20,10 @@ inputs:
     description: "OpenRouter API key for AI-native detection (optional)"
     required: false
     default: ""
+  nvidia-nim-key:
+    description: "NVIDIA NIM API key for threat detection (free tier available, optional)"
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -37,6 +41,7 @@ runs:
       shell: bash
       env:
         MCPEEK_OPENROUTER_API_KEY: ${{ inputs.openrouter-key }}
+        NVIDIA_API_KEY: ${{ inputs.nvidia-nim-key }}
       run: |
         set +e
         OUTPUT_FILE="/tmp/mcpeek-results.sarif"

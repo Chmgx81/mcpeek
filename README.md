@@ -177,9 +177,15 @@ jobs:
         with:
           path: config/mcp-server.json
           fail-on: high
+          # Optional: enable AI threat detection (free NVIDIA NIM models)
+          nvidia-nim-key: ${{ secrets.NVIDIA_NIM_API_KEY }}
 ```
 
 The action exits with code 2 when findings exceed the threshold, blocking the merge.
+
+### GitHub Marketplace
+
+MCPeek is available on [GitHub Marketplace](https://github.com/marketplace/actions/mcpeek-security-scan) — install directly into your repository.
 
 ---
 
