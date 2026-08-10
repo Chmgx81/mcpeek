@@ -19,6 +19,7 @@ class ScanOptions(BaseModel):
     timeout: int = Field(default=120, ge=1, le=120)
     inline_content: str | None = Field(default=None, max_length=settings.MAX_INLINE_CONTENT_BYTES)
     ai_model: str | None = Field(default=None, max_length=100)
+    ai_detect: bool = True  # Enable AI-native detection (validates + adds to heuristic findings)
 
     @field_validator("inline_content")
     @classmethod
@@ -55,6 +56,7 @@ class FindingCreate(BaseModel):
     cwe: str | None = None
     owasp: str | None = None
     references: list[str] = Field(default_factory=list)
+    source: str = "heuristic"  # heuristic, heuristic+ai, ai_detected
 
 
 class FindingResponse(BaseModel):
@@ -68,6 +70,7 @@ class FindingResponse(BaseModel):
     cwe: str | None
     owasp: str | None
     references: list[str]
+    source: str = "heuristic"
 
     model_config = {"from_attributes": True}
 

@@ -32,6 +32,8 @@ const CAT_LABELS: Record<string, string> = {
   intent_subversion: "Intent Subversion",
   context_oversharing: "Context Over-Sharing",
   skillcloak: "SKILLCLOAK",
+  ai_detected: "AI Detected",
+  social_engineering: "Social Engineering",
 };
 
 export default function FindingCard({ finding }: { finding: Finding }) {
@@ -48,6 +50,11 @@ export default function FindingCard({ finding }: { finding: Finding }) {
         <span className="truncate text-[13px] font-medium flex-1" style={{ color: "#e5e5e5" }}>
           {finding.title}
         </span>
+        {finding.source === "ai_detected" && (
+          <span className="shrink-0 px-1.5 py-0.5 text-[8px] font-semibold uppercase" style={{ background: "#7c3aed", color: "#fff", borderRadius: "2px" }}>
+            AI
+          </span>
+        )}
         <span className="hidden sm:inline shrink-0 text-[9px] uppercase tracking-wider" style={{ color: "#525252" }}>
           {CAT_LABELS[finding.category] || finding.category}
         </span>

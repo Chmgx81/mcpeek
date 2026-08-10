@@ -128,6 +128,7 @@ def _parse_findings(rows: list[dict]) -> list[FindingResponse]:
             title=f["title"], description=f["description"], evidence=f["evidence"],
             remediation=f["remediation"], cwe=f.get("cwe"), owasp=f.get("owasp"),
             references=json.loads(f["references_json"]) if f.get("references_json") else [],
+            source=f.get("source", "heuristic"),
         )
         for f in rows
     ]
@@ -141,6 +142,7 @@ def _finding_dicts(rows: list[dict]) -> list[dict]:
             "evidence": f["evidence"], "remediation": f["remediation"],
             "cwe": f.get("cwe"), "owasp": f.get("owasp"),
             "references": json.loads(f["references_json"]) if f.get("references_json") else [],
+            "source": f.get("source", "heuristic"),
         }
         for f in rows
     ]
@@ -299,6 +301,7 @@ async def get_report(scan_id: str):
                 title=f["title"], description=f["description"], evidence=f["evidence"],
                 remediation=f["remediation"], cwe=f.get("cwe"), owasp=f.get("owasp"),
                 references=json.loads(f["references_json"]) if f.get("references_json") else [],
+                source=f.get("source", "heuristic"),
             )
             if f["severity"] in groups:
                 groups[f["severity"]].append(fr)

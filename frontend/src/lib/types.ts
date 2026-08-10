@@ -30,6 +30,7 @@ export interface Finding {
   cwe: string | null;
   owasp: string | null;
   references: string[];
+  source: string;
 }
 
 export interface ScanMeta {

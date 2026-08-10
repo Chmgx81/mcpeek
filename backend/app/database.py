@@ -116,7 +116,8 @@ CREATE TABLE IF NOT EXISTS findings (
     remediation TEXT NOT NULL DEFAULT '',
     cwe TEXT,
     owasp TEXT,
-    references_json TEXT NOT NULL DEFAULT '[]'
+    references_json TEXT NOT NULL DEFAULT '[]',
+    source TEXT NOT NULL DEFAULT 'heuristic'
 );
 """
 
@@ -126,4 +127,9 @@ async def init_db() -> None:
     statements = [s.strip() for s in SCHEMA_SQL.strip().split(";") if s.strip()]
     for stmt in statements:
         await execute(stmt)
+    # Migration: add source column to findings table if missing
+    try:
+        await execute("ALTER TABLE findings ADD COLUMN source TEXT NOT NULL DEFAULT 'heuristic'")
+    except Exception:
+        pass  # Column already exists
     logger.info("Database tables initialized")

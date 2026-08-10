@@ -12,6 +12,7 @@ from .package_scanner import scan_package
 from .risk_scorer import build_summary, calculate_risk
 from .skill_scanner import scan_skill
 from .ai_analyzer import run_ai_analysis
+from .ai_detector import detect_with_ai
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -65,11 +66,29 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
                     metadata["content_changed"] = True
                     metadata["changed_urls"] = [c["url"] for c in changes]
 
+        # AI-native detection: validate, refine, and add to heuristic findings
+        ai_key = settings.OPENROUTER_API_KEY
+        ai_model = request.options.ai_model or "openai/gpt-oss-20b:free"
+        if ai_key and request.options.ai_detect:
+            try:
+                raw_content = request.options.inline_content or ""
+                all_findings = await detect_with_ai(
+                    content=raw_content,
+                    findings=all_findings,
+                    target_type=request.target_type.value,
+                    api_key=ai_key,
+                    model=ai_model,
+                )
+                ai_findings = [f for f in all_findings if f.source == "ai_detected"]
+                if ai_findings:
+                    metadata["ai_findings_count"] = len(ai_findings)
+            except Exception:
+                logger.warning("AI detection failed, falling back to heuristics only")
+
         overall_risk, risk_level = calculate_risk(all_findings)
         summary = build_summary(all_findings)
 
         ai_results = {}
-        ai_key = settings.OPENROUTER_API_KEY
         if ai_key:
             findings_dicts = [
                 {
@@ -97,10 +116,10 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
         for f in all_findings:
             finding_id = str(uuid.uuid4())
             await execute(
-                """INSERT INTO findings (id, scan_id, category, severity, title, description, evidence, remediation, cwe, owasp, references_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO findings (id, scan_id, category, severity, title, description, evidence, remediation, cwe, owasp, references_json, source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 [finding_id, scan_id, f.category, f.severity, f.title, f.description,
-                 f.evidence, f.remediation, f.cwe, f.owasp, json.dumps(f.references)],
+                 f.evidence, f.remediation, f.cwe, f.owasp, json.dumps(f.references), getattr(f, "source", "heuristic")],
             )
 
         # Update scan
