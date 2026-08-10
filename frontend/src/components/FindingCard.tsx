@@ -34,6 +34,16 @@ const CAT_LABELS: Record<string, string> = {
   skillcloak: "SKILLCLOAK",
   ai_detected: "AI Detected",
   social_engineering: "Social Engineering",
+  vulnerability_db: "VulnDB",
+  attack_defense: "Attack Defense",
+  agent_defense: "Agent Defense",
+};
+
+const SOURCE_BADGES: Record<string, { label: string; color: string; bg: string }> = {
+  ai_detected: { label: "AI", color: "#fff", bg: "#7c3aed" },
+  vuln_db: { label: "CVE", color: "#fff", bg: "#dc2626" },
+  attack_defense: { label: "HEUR", color: "#fff", bg: "#ea580c" },
+  agent_defense: { label: "AGENT", color: "#fff", bg: "#0891b2" },
 };
 
 export default function FindingCard({ finding }: { finding: Finding }) {
@@ -50,9 +60,9 @@ export default function FindingCard({ finding }: { finding: Finding }) {
         <span className="truncate text-[13px] font-medium flex-1" style={{ color: "#e5e5e5" }}>
           {finding.title}
         </span>
-        {finding.source === "ai_detected" && (
-          <span className="shrink-0 px-1.5 py-0.5 text-[8px] font-semibold uppercase" style={{ background: "#7c3aed", color: "#fff", borderRadius: "2px" }}>
-            AI
+        {SOURCE_BADGES[finding.source] && (
+          <span className="shrink-0 px-1.5 py-0.5 text-[8px] font-semibold uppercase" style={{ background: SOURCE_BADGES[finding.source].bg, color: SOURCE_BADGES[finding.source].color, borderRadius: "2px" }}>
+            {SOURCE_BADGES[finding.source].label}
           </span>
         )}
         <span className="hidden sm:inline shrink-0 text-[9px] uppercase tracking-wider" style={{ color: "#525252" }}>

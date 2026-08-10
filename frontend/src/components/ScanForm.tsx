@@ -19,8 +19,12 @@ const SCAN_STAGES = [
   "Scanning for secrets...",
   "Checking shell commands...",
   "Detecting injection vectors...",
+  "Querying vulnerability database...",
+  "Running attack defense heuristics...",
+  "AI threat detection...",
   "Scoring trust signals...",
   "Simulating attacks...",
+  "Agent defense validation...",
   "Generating report...",
 ];
 

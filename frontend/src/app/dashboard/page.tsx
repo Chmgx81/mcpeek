@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { TrendingUp, AlertTriangle, Clock } from "lucide-react";
+import { TrendingUp, AlertTriangle, Clock, Shield } from "lucide-react";
 import ScanForm from "@/components/ScanForm";
 import ScanHistoryTable from "@/components/ScanHistoryTable";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -52,8 +52,8 @@ export default function DashboardPage() {
         <div data-tour="stats">
           <p className="text-[10px] font-medium uppercase tracking-widest mb-2" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Overview</p>
           {loading ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex items-center gap-2.5 p-3 animate-pulse" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
                   <div className="h-8 w-8 rounded" style={{ background: "#1a1a1a" }} />
                   <div className="space-y-1.5">
@@ -64,9 +64,10 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
               <StatCard icon={TrendingUp} value={stats?.total_scans ?? 0} label="Total Scans" />
               <StatCard icon={AlertTriangle} value={(stats?.risk_distribution?.critical ?? 0) + (stats?.risk_distribution?.high ?? 0)} label="Critical & High" />
+              <StatCard icon={Shield} value="Active" label="Agent Defense" />
               <StatCard icon={Clock} value={recentScans.length} label="Recent" />
             </div>
           )}
@@ -90,7 +91,7 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ icon: Icon, value, label }: { icon: React.ElementType; value: number; label: string }) {
+function StatCard({ icon: Icon, value, label }: { icon: React.ElementType; value: number | string; label: string }) {
   return (
     <div className="flex items-center gap-2.5 p-3" style={{ background: "#111111", border: "1px solid #1a1a1a", borderRadius: "6px" }}>
       <div className="flex h-8 w-8 items-center justify-center rounded" style={{ background: "rgba(34,197,94,0.08)" }}>
