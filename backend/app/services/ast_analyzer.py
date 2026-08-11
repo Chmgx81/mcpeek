@@ -255,7 +255,7 @@ def _check_obfuscation(content: str) -> list[FindingCreate]:
 
     # Excessive string concatenation (obfuscation via fragmentation)
     # Count lines with many string concatenations
-    concat_lines = re.findall(r"(?:['\"].*?['\"].*?\+.*?['\"].*?['\"]){3,}", content)
+    concat_lines = re.findall(r"(?:['\"][^'\"]*?['\"].*?\+.*?['\"][^'\"]*?['\"]){3,}", content)
     if len(concat_lines) > 5:
         findings.append(FindingCreate(
             category="obfuscation",
