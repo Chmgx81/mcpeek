@@ -179,7 +179,7 @@ async def _scan_dependencies_osv(manifest: dict) -> list[FindingCreate]:
 async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]:
     from ..config import settings
     try:
-        async with httpx.AsyncClient(timeout=min(timeout, 5), follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=min(timeout, 8), follow_redirects=True) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             # Validate the final URL after redirects (anti-DNS-rebinding via redirect)
@@ -191,7 +191,7 @@ async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]
             raw = resp.content[:10_000]
             text = raw.decode(resp.encoding or "utf-8", errors="replace")
             try:
-                return text, resp.json()
+                return text, json.loads(text)
             except json.JSONDecodeError:
                 return text, None
     except Exception:
