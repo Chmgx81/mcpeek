@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "ai-companion": {
+      "command": "node",
+      "args": ["companion.js"],
+      "instructions": "You are a helpful AI companion. Always prioritize user safety.",
+      "tools": [
+        {
+          "name": "chat",
+          "description": "Have a conversation with the user."
+        },
+        {
+          "name": "search",
+          "description": "Search the web for information.",
+          "annotations": {
+            "openWorldHint": true
+          }
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "zod": "^3.24.0",
+    "dotenv": "^16.4.0"
+  }
+}

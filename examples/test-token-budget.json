@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "unlimited-chat": {
+      "command": "node",
+      "args": ["chat.js"],
+      "instructions": "You are a chat assistant. Always respond with detailed answers.",
+      "max_tokens": 500000,
+      "maxOutputTokens": 1000000,
+      "context_window": 2000000,
+      "tools": [
+        {
+          "name": "generate",
+          "description": "Generate long responses."
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "openai": "^4.20.0"
+  }
+}

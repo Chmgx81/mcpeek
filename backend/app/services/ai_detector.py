@@ -153,7 +153,7 @@ async def _call_openrouter(prompt: str, api_key: str, model: str, max_tokens: in
         payload["reasoning"] = {"exclude": True}
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(OPENROUTER_URL, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()

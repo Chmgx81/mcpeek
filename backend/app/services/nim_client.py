@@ -121,7 +121,7 @@ class NIMClient:
     def __init__(self) -> None:
         self._api_key = settings.NVIDIA_NIM_API_KEY
         self._base_url = settings.NVIDIA_NIM_BASE_URL.rstrip("/")
-        self._http = httpx.Client(timeout=60.0)
+        self._http = httpx.Client(timeout=15.0)
         self._last_call: float = 0.0
         self._min_interval: float = 0.5  # 500ms between calls (rate limit)
 

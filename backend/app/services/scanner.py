@@ -75,17 +75,23 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
         use_ai = ai_key or nim_client.available
         if use_ai and request.options.ai_detect:
             try:
+                import asyncio
                 raw_content = request.options.inline_content or ""
-                all_findings = await detect_with_ai(
-                    content=raw_content,
-                    findings=all_findings,
-                    target_type=request.target_type.value,
-                    api_key=ai_key,
-                    model=ai_model,
+                all_findings = await asyncio.wait_for(
+                    detect_with_ai(
+                        content=raw_content,
+                        findings=all_findings,
+                        target_type=request.target_type.value,
+                        api_key=ai_key,
+                        model=ai_model,
+                    ),
+                    timeout=15.0,
                 )
                 ai_findings = [f for f in all_findings if f.source == "ai_detected"]
                 if ai_findings:
                     metadata["ai_findings_count"] = len(ai_findings)
+            except asyncio.TimeoutError:
+                logger.warning("AI detection timed out (15s), using heuristics only")
             except Exception:
                 logger.warning("AI detection failed, falling back to heuristics only")
 
@@ -105,15 +111,24 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
                 for f in all_findings
             ]
             if ai_key:
-                ai_results = await run_ai_analysis(
-                    findings=findings_dicts,
-                    target=request.target,
-                    target_type=request.target_type.value,
-                    risk_score=overall_risk,
-                    trust_score=summary.get("trust_score", 100),
-                    api_key=ai_key,
-                    model=request.options.ai_model if request.options and request.options.ai_model else "openai/gpt-oss-20b:free",
-                )
+                try:
+                    import asyncio
+                    ai_results = await asyncio.wait_for(
+                        run_ai_analysis(
+                            findings=findings_dicts,
+                            target=request.target,
+                            target_type=request.target_type.value,
+                            risk_score=overall_risk,
+                            trust_score=summary.get("trust_score", 100),
+                            api_key=ai_key,
+                            model=request.options.ai_model if request.options and request.options.ai_model else "openai/gpt-oss-20b:free",
+                        ),
+                        timeout=20.0,
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning("AI analysis timed out (20s), skipping enrichment")
+                except Exception:
+                    logger.warning("AI analysis failed, skipping enrichment")
             elif nim_client.available:
                 # Use NIM for enrichment when OpenRouter is not configured
                 for f in all_findings[:5]:
