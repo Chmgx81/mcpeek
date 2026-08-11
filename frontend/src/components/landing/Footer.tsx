@@ -12,7 +12,7 @@ const links = {
   developers: [
     { label: "GitHub", href: "https://github.com/Chmgx81/mcpeek", external: true },
     { label: "GitHub Action", href: "https://github.com/Chmgx81/mcpeek/tree/main/.github/workflows", external: true },
-    { label: "API Docs", href: "https://mcpeek-api-production.up.railway.app/docs", external: true },
+            { label: "API Docs", href: "https://mcpeek-backend.vercel.app/docs", external: true },
   ],
   community: [
     { label: "Hackathon Demo", href: "https://youtu.be/mQXrpGpstA8", external: true },
@@ -94,8 +94,8 @@ export default function Footer() {
               <Github className="h-3 w-3" />
               Source
             </a>
-            <a
-              href="https://frontend-lake-eight-70.vercel.app/dashboard"
+              <a
+              href="/dashboard"
               className="text-[11px] transition-colors"
               style={{ color: "#404040" }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#737373")}

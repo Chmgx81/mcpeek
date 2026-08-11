@@ -30,7 +30,7 @@ export default function BentoFeatures() {
     },
     {
       title: "AI Threat Detection",
-      desc: "3-layer pipeline: Vulnerability database (22 CVEs) → Attack defense heuristics → NVIDIA NIM AI analysis with 13 free models.",
+      desc: "3-layer pipeline: Vulnerability database (38 CVEs) → Attack defense heuristics → NVIDIA NIM AI analysis with 13 free models.",
       icon: ShieldCheck,
       accent: "#ef4444",
     },

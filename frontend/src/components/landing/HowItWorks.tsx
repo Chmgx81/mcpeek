@@ -14,7 +14,7 @@ export default function HowItWorks() {
           <div className="hidden md:block absolute top-8 left-[12.5%] right-[12.5%] h-px" style={{ background: "#262626" }} />
           {[
             { step: "01", title: "Submit a target", desc: "Paste a URL, config file, or package name. Supports MCP servers, agent skills, npm, and PyPI.", icon: Terminal },
-            { step: "02", title: "Static + heuristic scan", desc: "38 known CVEs, 8 attack patterns, adversarial prefix detection, Unicode obfuscation checks.", icon: Eye },
+            { step: "02", title: "Static + heuristic scan", desc: "38 known vulnerabilities, 8 attack patterns, adversarial prefix detection, Unicode obfuscation checks.", icon: Eye },
             { step: "03", title: "AI threat detection", desc: "3-layer pipeline runs NVIDIA NIM models to identify novel threats and generate attack scenarios.", icon: ShieldCheck },
             { step: "04", title: "Agent defense", desc: "Unicode normalization, Base64 decoding, social engineering detection, tool abuse prevention, session tracking.", icon: Lock },
           ].map((item) => (

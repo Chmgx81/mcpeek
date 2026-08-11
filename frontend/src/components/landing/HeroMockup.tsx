@@ -86,11 +86,12 @@ export default function HeroMockup() {
               <div className="text-[8px] font-medium uppercase tracking-wider" style={{ color: "#525252" }}>Trust</div>
             </div>
             <div className="rounded p-3" style={{ border: "1px solid #1a1a1a", background: "#111111" }}>
-              <div className="text-[18px] font-bold" style={{ color: "#e5e5e5" }}>12</div>
+              <div className="text-[18px] font-bold" style={{ color: "#e5e5e5" }}>8</div>
               <div className="text-[9px] mb-1.5" style={{ color: "#525252" }}>Findings</div>
               <div className="space-y-1">
-                <div className="flex items-center gap-1"><div className="h-1 w-1 rounded-full" style={{ background: "#ef4444" }} /><span className="text-[8px]" style={{ color: "#737373" }}>2 Critical</span></div>
+                <div className="flex items-center gap-1"><div className="h-1 w-1 rounded-full" style={{ background: "#ef4444" }} /><span className="text-[8px]" style={{ color: "#737373" }}>1 Critical</span></div>
                 <div className="flex items-center gap-1"><div className="h-1 w-1 rounded-full" style={{ background: "#f97316" }} /><span className="text-[8px]" style={{ color: "#737373" }}>3 High</span></div>
+                <div className="flex items-center gap-1"><div className="h-1 w-1 rounded-full" style={{ background: "#eab308" }} /><span className="text-[8px]" style={{ color: "#737373" }}>4 Medium</span></div>
               </div>
             </div>
           </div>
