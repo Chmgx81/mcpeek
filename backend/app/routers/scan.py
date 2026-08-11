@@ -80,15 +80,26 @@ async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks:
 
 
 async def _run_scan_task(scan_id: str, request: ScanRequest) -> None:
+    import asyncio
     max_retries = 2
     for attempt in range(max_retries + 1):
         try:
-            await run_scan(scan_id, request)
+            # Add timeout to prevent Vercel 60s limit
+            await asyncio.wait_for(run_scan(scan_id, request), timeout=55.0)
+            return
+        except asyncio.TimeoutError:
+            logger.warning("Scan %s timed out after 55s", scan_id)
+            try:
+                await execute(
+                    "UPDATE scans SET status = 'failed', error_message = ? WHERE id = ? AND status != 'completed'",
+                    ["Scan timed out", scan_id],
+                )
+            except Exception:
+                pass
             return
         except Exception:
             if attempt < max_retries:
                 logger.warning("Scan %s attempt %d failed, retrying...", scan_id, attempt + 1)
-                import asyncio
                 await asyncio.sleep(2 ** attempt)
             else:
                 logger.exception("Scan %s failed after %d attempts", scan_id, max_retries + 1)
