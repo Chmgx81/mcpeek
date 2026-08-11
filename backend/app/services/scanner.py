@@ -69,11 +69,13 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
                     metadata["changed_urls"] = [c["url"] for c in changes]
 
         # AI-native detection: validate, refine, and add to heuristic findings
+        # Skip AI detection for URL scans (content truncated to 10KB, AI adds little value)
         ai_key = settings.OPENROUTER_API_KEY
         nim_client = get_nim_client()
         ai_model = request.options.ai_model or "openai/gpt-oss-20b:free"
         use_ai = ai_key or nim_client.available
-        if use_ai and request.options.ai_detect:
+        has_inline = bool(request.options and request.options.inline_content)
+        if use_ai and request.options.ai_detect and has_inline:
             try:
                 import asyncio
                 raw_content = request.options.inline_content or ""
@@ -99,7 +101,7 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
         summary = build_summary(all_findings)
 
         ai_results = {}
-        if use_ai:
+        if use_ai and has_inline:
             findings_dicts = [
                 {
                     "category": f.category,
