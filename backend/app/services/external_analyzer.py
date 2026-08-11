@@ -40,16 +40,16 @@ DATA_EXFIL_PATTERNS = [
 ]
 
 
-async def analyze_urls(urls: list[str], timeout: int = 15) -> tuple[list[FindingCreate], int]:
+async def analyze_urls(urls: list[str], timeout: int = 15, max_urls: int = 30) -> tuple[list[FindingCreate], int]:
     findings: list[FindingCreate] = []
     checked = 0
 
     async with httpx.AsyncClient(
-        timeout=timeout,
+        timeout=min(timeout, 8),
         follow_redirects=True,
         headers={"User-Agent": "MCPeek/0.1 Security Scanner"},
     ) as client:
-        for url in urls[:30]:  # cap at 30 URLs
+        for url in urls[:max_urls]:
             checked += 1
             try:
                 parsed = urlparse(url)

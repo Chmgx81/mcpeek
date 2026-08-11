@@ -88,28 +88,23 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
     from .skillcloak_detector import detect_skillcloak
     findings.extend(detect_skillcloak(content, source=target))
 
-    # Extract URLs for external analysis
-    urls_found.extend(extract_urls(content))
-    urls_found.extend(extract_urls(json.dumps(manifest) if manifest else ""))
+    # Extract URLs for external analysis (limit to 15 URLs to stay within Vercel timeout)
+    raw_urls = extract_urls(content)
+    raw_urls.extend(extract_urls(json.dumps(manifest) if manifest else ""))
+    urls_found = list(dict.fromkeys(raw_urls))[:15]  # dedupe + cap at 15
 
-    # External URL analysis
+    # External URL analysis — wrapped in a global timeout to prevent Vercel 60s kill
     if deep and urls_found:
-        url_findings, checked = await analyze_urls(urls_found, timeout=min(timeout, 15))
-        findings.extend(url_findings)
-        metadata["urls_checked"] = checked
-
-        # Content hashing for bait-and-switch detection
-        url_hashes = await hash_external_urls(urls_found, timeout=min(timeout, 10))
-        metadata["content_hashes"] = url_hashes
-
-        # Dependency risk scoring
-        risk_findings, risk_score = score_urls(urls_found)
-        findings.extend(risk_findings)
-        metadata["dependency_risk_score"] = risk_score
-
-        # Domain reputation analysis
-        domain_findings = analyze_domain_reputation(urls_found)
-        findings.extend(domain_findings)
+        import asyncio
+        try:
+            await asyncio.wait_for(
+                _deep_url_analysis(findings, metadata, urls_found, timeout, manifest),
+                timeout=25.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("Deep URL analysis timed out (25s), continuing with partial results")
+        except Exception:
+            logger.warning("Deep URL analysis failed, continuing with partial results")
 
         # Real vulnerability lookup via OSV for npm dependencies
         if manifest:
@@ -117,6 +112,29 @@ async def scan_mcp_server(target: str, deep: bool = True, timeout: int = 120, in
             findings.extend(osv_findings)
 
     return findings, metadata
+
+
+async def _deep_url_analysis(
+    findings: list[FindingCreate], metadata: dict, urls_found: list[str], timeout: int, manifest: dict | None
+) -> None:
+    """Run all deep URL analyses with reduced limits for Vercel compatibility."""
+    # Analyze up to 10 URLs with 5s timeout each
+    url_findings, checked = await analyze_urls(urls_found, timeout=min(timeout, 5), max_urls=10)
+    findings.extend(url_findings)
+    metadata["urls_checked"] = checked
+
+    # Content hashing for bait-and-switch detection (10 URLs, 5s timeout)
+    url_hashes = await hash_external_urls(urls_found, timeout=min(timeout, 5), max_urls=10)
+    metadata["content_hashes"] = url_hashes
+
+    # Dependency risk scoring (fast, no network)
+    risk_findings, risk_score = score_urls(urls_found)
+    findings.extend(risk_findings)
+    metadata["dependency_risk_score"] = risk_score
+
+    # Domain reputation analysis (fast, no network)
+    domain_findings = analyze_domain_reputation(urls_found)
+    findings.extend(domain_findings)
 
 
 async def _scan_dependencies_osv(manifest: dict) -> list[FindingCreate]:

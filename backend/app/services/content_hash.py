@@ -27,20 +27,20 @@ def compute_content_hash(content: str | bytes) -> str:
 
 
 async def hash_external_urls(
-    urls: list[str], timeout: int = 15
+    urls: list[str], timeout: int = 15, max_urls: int = 20
 ) -> dict[str, str]:
     """Fetch each URL and return {url: sha256_hash} mapping.
 
-    Caps at 20 URLs. Only hashes http/https URLs that return text content.
+    Caps at max_urls. Only hashes http/https URLs that return text content.
     """
     hashes: dict[str, str] = {}
 
     async with httpx.AsyncClient(
-        timeout=timeout,
+        timeout=min(timeout, 8),
         follow_redirects=True,
         headers={"User-Agent": "MCPeek/0.1 Content-Hash"},
     ) as client:
-        for url in urls[:20]:
+        for url in urls[:max_urls]:
             parsed = urlparse(url)
             if parsed.scheme not in ("http", "https") or not is_safe_public_url(url):
                 continue
