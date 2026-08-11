@@ -180,20 +180,28 @@ async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]
     from ..config import settings
     try:
         async with httpx.AsyncClient(timeout=min(timeout, 8), follow_redirects=True) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            # Validate the final URL after redirects (anti-DNS-rebinding via redirect)
-            if not settings.ALLOW_PRIVATE_NETWORK_SCANS:
-                final_host = str(resp.url.host) if resp.url.host else None
-                if final_host and not validate_ip_at_connect_time(final_host):
-                    return "", None
-            # Limit content to 10KB for analysis (prevents timeouts on large responses)
-            raw = resp.content[:10_000]
-            text = raw.decode(resp.encoding or "utf-8", errors="replace")
-            try:
-                return text, json.loads(text)
-            except json.JSONDecodeError:
-                return text, None
+            # Stream response and only read up to 12KB (avoids downloading full body for large responses)
+            async with client.stream("GET", url) as resp:
+                resp.raise_for_status()
+                # Validate the final URL after redirects (anti-DNS-rebinding via redirect)
+                if not settings.ALLOW_PRIVATE_NETWORK_SCANS:
+                    final_host = str(resp.url.host) if resp.url.host else None
+                    if final_host and not validate_ip_at_connect_time(final_host):
+                        return "", None
+                # Read only first 10KB
+                chunks = []
+                total = 0
+                async for chunk in resp.aiter_bytes():
+                    chunks.append(chunk)
+                    total += len(chunk)
+                    if total >= 10_000:
+                        break
+                raw = b"".join(chunks)[:10_000]
+                text = raw.decode("utf-8", errors="replace")
+                try:
+                    return text, json.loads(text)
+                except json.JSONDecodeError:
+                    return text, None
     except Exception:
         return "", None
 
