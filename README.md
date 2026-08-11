@@ -227,6 +227,73 @@ Report (risk score, findings, export in JSON/Markdown/Text)
 
 ---
 
+## AI Analysis Configuration
+
+MCPeek uses AI models to generate attack scenarios, risk narratives, and remediation suggestions. The core scanner works without AI — this is an optional enhancement.
+
+### NVIDIA NIM (Recommended — Free)
+
+NVIDIA NIM provides 13 free models with no credit card required:
+
+| Model | Use |
+|-------|-----|
+| `meta/llama-3.3-70b-instruct` | Threat detection, attack scenarios |
+| `nvidia/nemotron-nano-12b-v2` | Risk narrative, remediation |
+| `qwen/qwen3-8b` | Agent defense analysis |
+| `nvidia/gemma-3-1b-it` | Fast classification |
+| Plus 9 more models | Various analysis tasks |
+
+**Setup:**
+
+1. Get a free API key at [build.nvidia.com](https://build.nvidia.com)
+2. Set the environment variable:
+
+```bash
+# Backend (Vercel or local)
+MCPEEK_NVIDIA_NIM_API_KEY=nvapi-your-key-here
+```
+
+3. For GitHub Actions:
+
+```yaml
+- uses: Chmgx81/mcpeek@main
+  with:
+    path: config.json
+    nvidia-nim-key: ${{ secrets.NVIDIA_NIM_API_KEY }}
+```
+
+### OpenRouter (Alternative — Free Tier)
+
+OpenRouter provides access to multiple free models:
+
+1. Get an API key at [openrouter.ai](https://openrouter.ai) (no credit card needed)
+2. Set the environment variable:
+
+```bash
+MCPEEK_OPENROUTER_API_KEY=sk-or-v1-your-key-here
+```
+
+### How AI Analysis Works
+
+```
+Static scan findings
+    ↓
+Vulnerability DB (38 CVEs/advisories)
+    ↓
+Attack defense heuristics
+    ↓
+AI analysis (if configured):
+  - Threat detection → attack scenarios
+  - Risk narrative → plain-English summary
+  - Remediation → specific config fixes
+    ↓
+Combined report
+```
+
+AI calls are rate-limited (5/minute) and have a 15-second timeout. If AI is unavailable, the scanner falls back to static analysis only.
+
+---
+
 ## Security
 
 - Rate limiting (10 scans/min/IP)
