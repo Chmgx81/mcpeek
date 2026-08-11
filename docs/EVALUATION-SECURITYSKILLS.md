@@ -215,7 +215,7 @@ MCPeek demonstrates **strong coverage** across AI security frameworks (OWASP LLM
 
 ### CVE Triage ⚠️ PARTIAL
 **Coverage:** Partial — limited CVE database
-- 22 known CVEs with severity ratings
+- 38 known vulnerabilities with severity ratings (24 CVEs + 14 advisories)
 - MITRE ATT&CK technique mapping
 - Gaps: No CVSS 4.0 scoring, no SSVC 2.1 decision trees, no live CISA KEV
 - Frameworks: CVSS-4.0, SSVC-2.1, CISA-KEV, EPSS
@@ -337,7 +337,7 @@ MCPeek demonstrates **strong coverage** across AI security frameworks (OWASP LLM
 | Combined Attacks | 4/4 blocked (100%) |
 | **Total** | **20/20 blocked (100%)** |
 
-### Test Suite (198 total)
+### Test Suite (230 total)
 | Suite | Tests | Status |
 |-------|-------|--------|
 | Agent Tools | 29 | ✅ All passing |
@@ -346,7 +346,7 @@ MCPeek demonstrates **strong coverage** across AI security frameworks (OWASP LLM
 | AI Detector | 25 | ✅ All passing |
 | Vulnerability DB | 15 | ✅ All passing |
 | Other | 90 | ✅ All passing |
-| **Total** | **198** | ✅ **All passing** |
+| **Total** | **230** | ✅ **All passing** |
 
 ---
 
@@ -416,7 +416,7 @@ MCPeek's unique value proposition — scanning MCP configs for AI-agent-specific
 ### LLM03:2025 — Supply Chain Vulnerabilities ✅ STRONG
 
 **MCPeek Coverage:** Strong
-- **Vulnerability DB:** 22 known CVEs including ShadowCatcher, LangFlow RCE, Ollama SSRF
+- **Vulnerability DB:** 38 known vulnerabilities including ShadowCatcher, LangFlow RCE, Ollama SSRF
 - **Package Scanner:** npm and PyPI dependency analysis, lifecycle script detection
 - **Attack Defense:** Supply chain patterns for telemetry exfiltration, behavior changes
 - **Test Results:** Supply chain test cases all detected
@@ -546,7 +546,7 @@ MCPeek's unique value proposition — scanning MCP configs for AI-agent-specific
 ### AG07 — Supply Chain Attacks ✅ STRONG
 
 **MCPeek Coverage:** Strong
-- **Vulnerability DB:** 22 CVEs, supply chain patterns
+- **Vulnerability DB:** 38 vulnerabilities, supply chain patterns
 - **Attack Defense:** ShadowCatcher, RugPull detection
 - **Adversarial Tests:** Package metadata poisoning, ShadowCatcher replay, RugPull — all blocked
 
@@ -634,7 +634,7 @@ MCPeek detects:
 | AI Detector | 25 | ✅ All passing |
 | Vulnerability DB | 15 | ✅ All passing |
 | Other | 90 | ✅ All passing |
-| **Total** | **198** | ✅ **All passing** |
+| **Total** | **230** | ✅ **All passing** |
 
 ---
 

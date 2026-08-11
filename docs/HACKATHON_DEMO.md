@@ -10,7 +10,7 @@
 | Resource | URL |
 |----------|-----|
 | Live Demo | https://frontend-lake-eight-70.vercel.app |
-| API | https://mcpeek-api-production.up.railway.app/docs |
+| API | https://mcpeek-backend.vercel.app/docs |
 | GitHub | https://github.com/Chmgx81/mcpeek |
 | Demo Video | https://youtu.be/mQXrpGpstA8 |
 | Blog Post | https://rootmazex.hashnode.com/mcpeek-catching-security-threats-in-mcp-servers-before-they-execute |
@@ -70,29 +70,33 @@ MCPeek is a runtime-aware security scanner for MCP servers and AI agent skills. 
 3. **SKILLCLOAK defense** — entropy analysis catches self-extracting skills that bypass static scanners
 4. **OWASP MCP Top 10** — purpose-built detection for MCP-specific vulnerability classes
 5. **CI/CD integration** — GitHub Action blocks unsafe configs in pull requests
+6. **Agent defense** — actively defends against adversarial attacks on the AI agent itself
 
 ## Stats
 
-- **110 unit tests**, all passing
+- **230 unit tests**, all passing
+- **20/20 adversarial attack scenarios** blocked (100%)
+- **38 known vulnerabilities** in the detection database
 - **15+ threat categories** detected
 - **4 scan targets**: MCP Server, Agent Skill, npm Package, PyPI Package
-- **AI analysis** via free OpenRouter models (no credit card required)
+- **13 free AI models** via NVIDIA NIM (Llama 3.3, Nemotron, Qwen3, GPT-OSS, Gemma)
 - **< 1 second** CLI scan time
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.12, FastAPI, SQLAlchemy, SQLite |
+| Backend | Python 3.12, FastAPI, Turso (libSQL cloud) |
 | Frontend | Next.js, React, Tailwind CSS |
-| AI | OpenRouter (free models) |
-| Deployment | Railway (API) + Vercel (frontend) |
+| AI Analysis | NVIDIA NIM (13 free models) + OpenRouter (free tier) |
+| Deployment | Vercel (frontend + backend serverless) |
 | CI/CD | GitHub Actions |
+| Database | Turso (libSQL cloud, serverless) |
 
 ## Production Path
 
-- Move from SQLite to PostgreSQL
-- Replace FastAPI background tasks with a durable worker queue
-- Run scanner workers in isolated containers
+- Move from SQLite to PostgreSQL/Turso (done)
+- Replace FastAPI background tasks with synchronous execution (done)
 - Add per-user auth, scan ownership, and organization workspaces
 - Add scheduled scans and PR comments
+- Expand CVE database with more LLM framework CVEs

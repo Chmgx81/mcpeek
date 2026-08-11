@@ -7,30 +7,28 @@ MCPeek is a public-facing scanner. Every scan target is untrusted input.
 | Service | URL | Status |
 |---------|-----|--------|
 | Frontend | https://frontend-lake-eight-70.vercel.app | Vercel |
-| API | https://mcpeek-api-production.up.railway.app | Railway |
+| API | https://mcpeek-backend.vercel.app | Vercel Serverless |
 
 ## Environment Variables
 
-### Backend
+### Backend (Vercel)
 
 ```bash
-MCPEEK_DATABASE_URL=sqlite+aiosqlite:///./mcpeek.db
+MCPEEK_TURSO_DATABASE_URL=libsql://your-db-name.turso.io
+MCPEEK_TURSO_AUTH_TOKEN=your-turso-auth-token
 MCPEEK_CORS_ORIGINS=https://frontend-lake-eight-70.vercel.app
 MCPEEK_RATE_LIMIT_PER_MINUTE=10
 MCPEEK_SCAN_TIMEOUT=120
-MCPEEK_MAX_CONCURRENT_SCANS=10
-MCPEEK_MAX_TARGET_LENGTH=2048
-MCPEEK_MAX_INLINE_CONTENT_BYTES=500000
-MCPEEK_MAX_REMOTE_BYTES=1000000
 MCPEEK_ALLOW_LOCAL_PATH_SCANS=false
 MCPEEK_ALLOW_PRIVATE_NETWORK_SCANS=false
-MCPEEK_OPENROUTER_API_KEY=sk-or-v1-...       # Optional: enables AI analysis
+MCPEEK_NVIDIA_NIM_API_KEY=nvapi-...       # Optional: enables AI threat detection
+MCPEEK_OPENROUTER_API_KEY=sk-or-v1-...    # Optional: enables AI analysis
 ```
 
-### Frontend
+### Frontend (Vercel)
 
 ```bash
-NEXT_PUBLIC_API_URL=https://mcpeek-api-production.up.railway.app
+NEXT_PUBLIC_API_URL=https://mcpeek-backend.vercel.app
 NEXT_PUBLIC_SITE_URL=https://frontend-lake-eight-70.vercel.app
 ```
 
@@ -48,47 +46,35 @@ NEXT_PUBLIC_SITE_URL=https://frontend-lake-eight-70.vercel.app
 
 - [ ] Set `MCPEEK_CORS_ORIGINS` to exact production frontend origin
 - [ ] Set `NEXT_PUBLIC_API_URL` before building frontend
-- [ ] Run backend behind a reverse proxy that forwards real client IP
+- [ ] Set `MCPEEK_TURSO_DATABASE_URL` and `MCPEEK_TURSO_AUTH_TOKEN` for database
 - [ ] Keep `MCPEEK_ALLOW_LOCAL_PATH_SCANS=false` for public deployments
 - [ ] Keep `MCPEEK_ALLOW_PRIVATE_NETWORK_SCANS=false` for public deployments
-- [ ] Store database files outside git workspace
-- [ ] Set `MCPEEK_OPENROUTER_API_KEY` for AI analysis (optional)
-
-## Railway Deployment
-
-The backend deploys via Dockerfile:
-
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY backend/app/ app/
-EXPOSE 8000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
-```
-
-Key: Railway assigns `PORT` at runtime. The Dockerfile uses shell form for `$PORT` expansion.
+- [ ] Optionally set `MCPEEK_NVIDIA_NIM_API_KEY` for AI threat detection
+- [ ] Optionally set `MCPEEK_OPENROUTER_API_KEY` for AI analysis
 
 ## Vercel Deployment
 
-Frontend deploys from `frontend/` directory:
+### Backend
+
+The backend deploys as a Vercel serverless function via `api/index.py` with Mangum:
+
+```bash
+cd backend && vercel --yes --prod
+```
+
+Key: Vercel Hobby plan has a 60-second function timeout. All scans run synchronously within this limit.
+
+### Frontend
 
 ```bash
 cd frontend && vercel --yes --prod
 ```
 
-SSO protection should be disabled for public access:
-
-```bash
-vercel project protection disable mcpeek-frontend --sso
-```
-
 ## Verification
 
 ```bash
-# Backend
-curl https://mcpeek-api-production.up.railway.app/health
+# Backend health
+curl https://mcpeek-backend.vercel.app/health
 
 # Frontend
 curl -sI https://frontend-lake-eight-70.vercel.app

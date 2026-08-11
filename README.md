@@ -220,7 +220,7 @@ Report (risk score, findings, export in JSON/Markdown/Text)
 |-------|-----------|
 | Backend | Python 3.12, FastAPI, Turso (libSQL cloud) |
 | Frontend | Next.js, React, Tailwind CSS |
-| AI Analysis | NVIDIA NIM (13 free models: Llama, Nemotron, Qwen3, GPT-OSS, Gemma) |
+| AI Analysis | NVIDIA NIM (13 free models: Llama 3.3, Nemotron, Qwen3, GPT-OSS, Gemma) |
 | Agent Defense | Unicode normalization, Base64 decoding, 20+ injection patterns |
 | Deployment | Vercel (frontend + backend serverless) |
 | CI/CD | GitHub Actions |
@@ -239,6 +239,8 @@ Report (risk score, findings, export in JSON/Markdown/Text)
 - Tool abuse prevention: rate limiting, permission checks, injection detection in parameters
 - Session tracking: 3-strike rule for repeated suspicious activity
 
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
 ---
 
 ## Environment Variables
@@ -251,8 +253,8 @@ Report (risk score, findings, export in JSON/Markdown/Text)
 | `MCPEEK_RATE_LIMIT_PER_MINUTE` | `10` | Max scans per IP per minute |
 | `MCPEEK_ALLOW_LOCAL_PATH_SCANS` | `false` | Allow local file path scanning |
 | `MCPEEK_ALLOW_PRIVATE_NETWORK_SCANS` | `false` | Allow private network targets |
-| `MCPEEK_OPENROUTER_API_KEY` | — | OpenRouter API key for AI analysis |
 | `MCPEEK_NVIDIA_NIM_API_KEY` | — | NVIDIA NIM API key for threat detection (free tier available) |
+| `MCPEEK_OPENROUTER_API_KEY` | — | OpenRouter API key for AI analysis (optional) |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend API URL for frontend |
 
 ---
@@ -261,7 +263,7 @@ Report (risk score, findings, export in JSON/Markdown/Text)
 
 ```bash
 cd backend && source .venv/bin/activate
-python -m pytest tests/ -v        # 198 tests (100% adversarial resistance)
+python -m pytest tests/ -v        # 230 tests (100% adversarial resistance)
 python -m ruff check app/         # Lint
 cd ../frontend && npx tsc --noEmit # Type check
 ```
@@ -274,11 +276,15 @@ cd ../frontend && npx tsc --noEmit # Type check
 | Agent Defense | 20 adversarial scenarios (Unicode homoglyphs, Base64, social engineering, tool abuse, supply chain) |
 | Attack Defense | 19 tests (heuristic patterns, adversarial prefixes, CVEs, fork bombs) |
 | AI Detector | 25 tests (3-layer pipeline, duplicate detection, NIM integration) |
-| Vulnerability DB | 15 tests (22 CVEs, 8 attack patterns, 17 categories) |
-| Other | 90 tests (patterns, risk scoring, SKILLCLOAK, URL safety) |
+| Vulnerability DB | 15 tests (38 vulnerabilities, 8 attack patterns, 17 categories) |
+| Other | 122 tests (patterns, risk scoring, SKILLCLOAK, URL safety, SBOM, token budget, npm audit) |
 
 ---
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

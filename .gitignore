@@ -13,10 +13,11 @@ out/
 dist/
 build/
 
-# Environment
+# Environment (allow .env.example)
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # IDE
 .vscode/
@@ -35,5 +36,6 @@ npm-debug.log*
 # SQLite
 *.db
 *.sqlite3
+
+# Vercel
 .vercel
-.env*
