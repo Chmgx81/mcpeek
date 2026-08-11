@@ -259,9 +259,13 @@ async def scan_dependencies_with_osv(
     Returns:
         List of findings for vulnerable dependencies
     """
-    findings = []
+    import asyncio
 
-    for pkg_name, pkg_version in dependencies.items():
+    findings = []
+    tasks = []
+
+    # Limit to 20 dependencies to prevent timeouts
+    for pkg_name, pkg_version in list(dependencies.items())[:20]:
         # Clean version string (remove ^, ~, >=, etc.)
         clean_version = re.sub(r"[^0-9a-zA-Z.\-]", "", pkg_version.split(",")[0].split(" ")[0])
 
@@ -269,9 +273,30 @@ async def scan_dependencies_with_osv(
             # Skip if version can't be parsed (e.g., "latest", "workspace:*")
             continue
 
-        vulns = await query_osv(pkg_name, clean_version, ecosystem)
+        tasks.append(_query_and_convert(pkg_name, clean_version, ecosystem))
 
-        for vuln in vulns:
-            findings.append(osv_to_finding(vuln))
+    # Run queries in parallel with timeout
+    if tasks:
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=10.0,  # 10 second total timeout for all OSV queries
+            )
+            for result in results:
+                if isinstance(result, list):
+                    findings.extend(result)
+        except asyncio.TimeoutError:
+            logger.warning("OSV batch query timed out")
 
     return findings
+
+
+async def _query_and_convert(
+    pkg_name: str, version: str, ecosystem: str
+) -> list[FindingCreate]:
+    """Query OSV for a single package and convert to findings."""
+    try:
+        vulns = await query_osv(pkg_name, version, ecosystem)
+        return [osv_to_finding(v) for v in vulns]
+    except Exception:
+        return []

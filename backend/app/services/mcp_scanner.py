@@ -144,8 +144,14 @@ async def _scan_dependencies_osv(manifest: dict) -> list[FindingCreate]:
 
     if all_deps:
         try:
-            osv_findings = await scan_dependencies_with_osv(all_deps, ecosystem="npm")
+            import asyncio
+            osv_findings = await asyncio.wait_for(
+                scan_dependencies_with_osv(all_deps, ecosystem="npm"),
+                timeout=15.0,  # 15 second timeout for OSV scanning
+            )
             findings.extend(osv_findings)
+        except asyncio.TimeoutError:
+            pass
         except Exception:
             pass
 
