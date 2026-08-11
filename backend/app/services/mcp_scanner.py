@@ -161,7 +161,7 @@ async def _scan_dependencies_osv(manifest: dict) -> list[FindingCreate]:
 async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]:
     from ..config import settings
     try:
-        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=min(timeout, 10), follow_redirects=True) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             # Validate the final URL after redirects (anti-DNS-rebinding via redirect)
@@ -169,8 +169,8 @@ async def _fetch_url_manifest(url: str, timeout: int) -> tuple[str, dict | None]
                 final_host = str(resp.url.host) if resp.url.host else None
                 if final_host and not validate_ip_at_connect_time(final_host):
                     return "", None
-            # Limit content to 100KB for analysis (prevents timeouts on large responses)
-            raw = resp.content[:100_000]
+            # Limit content to 50KB for analysis (prevents timeouts on large responses)
+            raw = resp.content[:50_000]
             text = raw.decode(resp.encoding or "utf-8", errors="replace")
             try:
                 return text, resp.json()
