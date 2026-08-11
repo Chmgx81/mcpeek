@@ -54,37 +54,58 @@ async def scan_skill(target: str, deep: bool = True, timeout: int = 120, inline_
     from .skillcloak_detector import detect_skillcloak
     findings.extend(detect_skillcloak(content, source=target))
 
-    # Extract and analyze URLs
-    urls_found.extend(extract_urls(content))
+    # Extract and analyze URLs (limit to 10 URLs to stay within Vercel timeout)
+    raw_urls = extract_urls(content)
+    urls_found = list(dict.fromkeys(raw_urls))[:10]
     if deep and urls_found:
-        url_findings, checked = await analyze_urls(urls_found, timeout=min(timeout, 15))
-        findings.extend(url_findings)
-        metadata["urls_checked"] = checked
-
-        # Content hashing for bait-and-switch detection
-        url_hashes = await hash_external_urls(urls_found, timeout=min(timeout, 10))
-        metadata["content_hashes"] = url_hashes
-
-        # Dependency risk scoring
-        risk_findings, risk_score = score_urls(urls_found)
-        findings.extend(risk_findings)
-        metadata["dependency_risk_score"] = risk_score
-
-        # Domain reputation analysis
-        domain_findings = analyze_domain_reputation(urls_found)
-        findings.extend(domain_findings)
+        import asyncio
+        try:
+            await asyncio.wait_for(
+                _deep_skill_url_analysis(findings, metadata, urls_found, timeout),
+                timeout=20.0,
+            )
+        except asyncio.TimeoutError:
+            pass
+        except Exception:
+            pass
 
     return findings, metadata
+
+
+async def _deep_skill_url_analysis(
+    findings: list[FindingCreate], metadata: dict, urls_found: list[str], timeout: int
+) -> None:
+    """Run deep URL analyses with reduced limits for Vercel compatibility."""
+    url_findings, checked = await analyze_urls(urls_found, timeout=min(timeout, 5), max_urls=10)
+    findings.extend(url_findings)
+    metadata["urls_checked"] = checked
+
+    url_hashes = await hash_external_urls(urls_found, timeout=min(timeout, 5), max_urls=10)
+    metadata["content_hashes"] = url_hashes
+
+    risk_findings, risk_score = score_urls(urls_found)
+    findings.extend(risk_findings)
+    metadata["dependency_risk_score"] = risk_score
+
+    domain_findings = analyze_domain_reputation(urls_found)
+    findings.extend(domain_findings)
 
 
 async def _fetch_skill_content(target: str, timeout: int) -> str:
     if target.startswith("http://") or target.startswith("https://"):
         try:
             import httpx
-            async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-                resp = await client.get(target)
-                resp.raise_for_status()
-                return resp.content[:1_000_000].decode(resp.encoding or "utf-8", errors="replace")
+            async with httpx.AsyncClient(timeout=min(timeout, 8), follow_redirects=True) as client:
+                async with client.stream("GET", target) as resp:
+                    resp.raise_for_status()
+                    chunks = []
+                    total = 0
+                    async for chunk in resp.aiter_bytes():
+                        chunks.append(chunk)
+                        total += len(chunk)
+                        if total >= 50_000:
+                            break
+                    return b"".join(chunks)[:50_000].decode("utf-8", errors="replace")
         except Exception:
             return ""
     else:

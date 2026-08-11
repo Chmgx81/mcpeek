@@ -192,6 +192,26 @@ export default function ScanForm() {
 
       {/* Text mode */}
       {inputMode === "text" && (
+        <>
+        <div className="flex flex-col gap-2 sm:flex-row mb-2">
+          <div className="relative sm:w-40 shrink-0">
+            <select
+              value={targetType}
+              onChange={(e) => setTargetType(e.target.value as TargetType)}
+              disabled={scanning}
+              className="w-full appearance-none px-2.5 py-2 pr-7 text-[12px] disabled:opacity-50"
+              style={{ background: "#0a0a0a", border: "1px solid #262626", color: "#a3a3a3", borderRadius: "4px" }}
+            >
+              {TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2" style={{ color: "#525252" }} />
+          </div>
+          <p className="flex items-center text-[11px]" style={{ color: "#404040" }}>
+            Select type matching your pasted content
+          </p>
+        </div>
         <textarea
           value={configText}
           onChange={(e) => setConfigText(e.target.value)}
@@ -201,6 +221,7 @@ export default function ScanForm() {
           className="w-full p-2.5 font-mono text-[11px] disabled:opacity-50 resize-none placeholder:text-[#404040]"
           style={{ background: "#0a0a0a", border: "1px solid #262626", color: "#e5e5e5", borderRadius: "4px" }}
         />
+        </>
       )}
 
       {/* Bottom row */}
