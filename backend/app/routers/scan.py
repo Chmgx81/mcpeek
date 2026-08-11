@@ -74,9 +74,32 @@ async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks:
         [scan_id, scan_req.target, scan_req.target_type.value, inline_content, now],
     )
 
-    background_tasks.add_task(_run_scan_task, scan_id, scan_req)
-
-    return {"scan_id": scan_id, "status": "pending"}
+    # For Vercel Hobby plan (60s limit), run scan inline with timeout
+    # Client should use inline_content for configs to avoid timeouts
+    import asyncio
+    try:
+        await asyncio.wait_for(run_scan(scan_id, scan_req), timeout=55.0)
+        return {"scan_id": scan_id, "status": "completed"}
+    except asyncio.TimeoutError:
+        logger.warning("Scan %s timed out inline, marking as failed", scan_id)
+        try:
+            await execute(
+                "UPDATE scans SET status = 'failed', error_message = ? WHERE id = ?",
+                ["Scan timed out (Vercel 60s limit)", scan_id],
+            )
+        except Exception:
+            pass
+        return {"scan_id": scan_id, "status": "failed", "error": "Scan timed out. Use inline config instead of URL for large responses."}
+    except Exception as e:
+        logger.exception("Scan %s failed", scan_id)
+        try:
+            await execute(
+                "UPDATE scans SET status = 'failed', error_message = ? WHERE id = ?",
+                [f"{type(e).__name__}: scan failed", scan_id],
+            )
+        except Exception:
+            pass
+        return {"scan_id": scan_id, "status": "failed", "error": str(e)}
 
 
 async def _run_scan_task(scan_id: str, request: ScanRequest) -> None:
