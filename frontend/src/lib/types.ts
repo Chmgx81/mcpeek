@@ -57,6 +57,7 @@ export interface ScanResponse {
   findings: Finding[];
   metadata: ScanMeta;
   created_at: string;
+  request_id?: string;
   content_changed?: boolean;
   rescan_of?: string;
   ai_attack_scenarios?: AIAttackScenario[];

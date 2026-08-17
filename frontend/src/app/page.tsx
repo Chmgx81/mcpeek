@@ -11,7 +11,8 @@ import HeroMockup from "@/components/landing/HeroMockup";
 import StatsBar from "@/components/landing/StatsBar";
 import BentoFeatures from "@/components/landing/BentoFeatures";
 import HowItWorks from "@/components/landing/HowItWorks";
-import DemoEvidence from "@/components/landing/DemoEvidence";
+import ValidationEvidence from "@/components/landing/ValidationEvidence";
+import Pricing from "@/components/landing/Pricing";
 import ComparisonTable from "@/components/landing/ComparisonTable";
 import FAQ from "@/components/landing/FAQ";
 import CTABanner from "@/components/landing/CTABanner";
@@ -95,7 +96,8 @@ export default function LandingPage() {
       <StatsBar />
       <BentoFeatures />
       <HowItWorks />
-      <DemoEvidence />
+      <ValidationEvidence />
+      <Pricing />
       <ComparisonTable />
       <FAQ />
       <CTABanner />

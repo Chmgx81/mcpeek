@@ -4,7 +4,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 
-from ..database import fetch_one, execute
+from ..database import fetch_one, execute, record_audit_event
 from ..schemas import FindingCreate, ScanRequest, TargetType
 from .content_hash import compare_hashes, hashes_from_json
 from .mcp_scanner import scan_mcp_server
@@ -22,9 +22,19 @@ logger = logging.getLogger(__name__)
 
 async def run_scan(scan_id: str, request: ScanRequest) -> None:
     start = time.monotonic()
+    scan_row = await fetch_one("SELECT target, target_type, request_id, client_ip, user_agent FROM scans WHERE id = ?", [scan_id])
 
     try:
         await execute("UPDATE scans SET status = 'running' WHERE id = ?", [scan_id])
+        if scan_row:
+            await record_audit_event(
+                "scan_running",
+                scan_id=scan_id,
+                target=scan_row.get("target"),
+                request_id=scan_row.get("request_id"),
+                client_ip=scan_row.get("client_ip"),
+                user_agent=scan_row.get("user_agent"),
+            )
 
         all_findings: list[FindingCreate] = []
         metadata: dict = {"files_analyzed": 0, "urls_checked": 0, "deps_analyzed": 0}
@@ -199,6 +209,16 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
              json.dumps(ai_results) if ai_results else "{}",
              request.rescan_of, scan_id],
         )
+        if scan_row:
+            await record_audit_event(
+                "scan_completed",
+                scan_id=scan_id,
+                target=scan_row.get("target"),
+                request_id=scan_row.get("request_id"),
+                client_ip=scan_row.get("client_ip"),
+                user_agent=scan_row.get("user_agent"),
+                details={"risk_level": risk_level, "overall_risk": overall_risk},
+            )
 
     except Exception as e:
         logger.exception("Scan %s failed", scan_id)
@@ -210,6 +230,19 @@ async def run_scan(scan_id: str, request: ScanRequest) -> None:
             )
         except Exception:
             pass
+        if scan_row:
+            try:
+                await record_audit_event(
+                    "scan_failed",
+                    scan_id=scan_id,
+                    target=scan_row.get("target"),
+                    request_id=scan_row.get("request_id"),
+                    client_ip=scan_row.get("client_ip"),
+                    user_agent=scan_row.get("user_agent"),
+                    details={"reason": type(e).__name__},
+                )
+            except Exception:
+                logger.exception("Failed to record audit event for scan %s", scan_id)
 
 
 def _merge_metadata(target: dict, source: dict) -> None:

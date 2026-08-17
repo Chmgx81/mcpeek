@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -84,9 +86,58 @@ async def fetch_val(sql: str, args: list[Any] | None = None) -> Any:
     return list(row.values())[0]
 
 
+async def record_audit_event(
+    event_type: str,
+    *,
+    scan_id: str | None = None,
+    workspace_id: str | None = None,
+    target: str | None = None,
+    request_id: str | None = None,
+    client_ip: str | None = None,
+    user_agent: str | None = None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    payload = details or {}
+    await execute(
+        """INSERT INTO audit_events (id, event_type, scan_id, workspace_id, target, request_id, client_ip, user_agent, details_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [
+            str(uuid.uuid4()),
+            event_type,
+            scan_id,
+            workspace_id or "public",
+            target,
+            request_id,
+            client_ip,
+            user_agent,
+            json.dumps(payload),
+            datetime.now(timezone.utc).isoformat(),
+        ],
+    )
+
+
 SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+    label TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    key_prefix TEXT NOT NULL,
+    scopes_json TEXT NOT NULL DEFAULT '["workspace:scan"]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at TEXT,
+    revoked_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS scans (
     id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT 'public',
     target TEXT NOT NULL,
     target_type TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
@@ -102,7 +153,23 @@ CREATE TABLE IF NOT EXISTS scans (
     content_hashes_json TEXT NOT NULL DEFAULT '{}',
     rescan_of TEXT,
     inline_content TEXT,
+    request_id TEXT,
+    client_ip TEXT,
+    user_agent TEXT,
     ai_json TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS audit_events (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    scan_id TEXT,
+    workspace_id TEXT NOT NULL DEFAULT 'public',
+    target TEXT,
+    request_id TEXT,
+    client_ip TEXT,
+    user_agent TEXT,
+    details_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS findings (
@@ -127,9 +194,32 @@ async def init_db() -> None:
     statements = [s.strip() for s in SCHEMA_SQL.strip().split(";") if s.strip()]
     for stmt in statements:
         await execute(stmt)
+    try:
+        await execute("INSERT INTO workspaces (id, name) VALUES (?, ?)", ["public", "Public Workspace"])
+    except Exception:
+        pass
     # Migration: add source column to findings table if missing
     try:
         await execute("ALTER TABLE findings ADD COLUMN source TEXT NOT NULL DEFAULT 'heuristic'")
     except Exception:
         pass  # Column already exists
+    for stmt in (
+        "ALTER TABLE scans ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'public'",
+        "ALTER TABLE scans ADD COLUMN request_id TEXT",
+        "ALTER TABLE scans ADD COLUMN client_ip TEXT",
+        "ALTER TABLE scans ADD COLUMN user_agent TEXT",
+        "ALTER TABLE audit_events ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'public'",
+    ):
+        try:
+            await execute(stmt)
+        except Exception:
+            pass
+    for stmt in (
+        "UPDATE scans SET workspace_id = 'public' WHERE workspace_id IS NULL OR workspace_id = ''",
+        "UPDATE audit_events SET workspace_id = 'public' WHERE workspace_id IS NULL OR workspace_id = ''",
+    ):
+        try:
+            await execute(stmt)
+        except Exception:
+            pass
     logger.info("Database tables initialized")

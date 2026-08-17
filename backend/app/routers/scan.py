@@ -8,9 +8,12 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from ..auth import create_workspace, require_admin, resolve_workspace
 from ..config import settings
-from ..database import fetch_one, fetch_all, fetch_val, execute
+from ..database import fetch_one, fetch_all, fetch_val, execute, record_audit_event
 from ..schemas import (
+    AuditEvent,
+    AuditEventListResponse,
     FindingResponse,
     ReportResponse,
     ScanListItem,
@@ -27,6 +30,32 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1")
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _request_context(request: Request) -> dict[str, str]:
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    forwarded_for = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    client_ip = forwarded_for or (request.client.host if request.client else "unknown")
+    user_agent = (request.headers.get("user-agent") or "").strip()
+    return {
+        "request_id": request_id,
+        "client_ip": client_ip,
+        "user_agent": user_agent[:512],
+    }
+
+
+def _public_scan_error(request_id: str) -> str:
+    return f"Scan failed. Reference request_id={request_id} when contacting support."
+
+
+def _decode_details(value: str | None) -> dict[str, object]:
+    if not value:
+        return {}
+    try:
+        decoded = json.loads(value)
+        return decoded if isinstance(decoded, dict) else {}
+    except (json.JSONDecodeError, TypeError):
+        return {}
 
 
 # ---------------------------------------------------------------------------
@@ -64,24 +93,35 @@ def _validate_target(target: str, target_type: str) -> None:
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks: BackgroundTasks):
     _validate_target(scan_req.target, scan_req.target_type.value)
+    context = _request_context(request)
+    workspace = await resolve_workspace(request)
 
     scan_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     inline_content = scan_req.options.inline_content if scan_req.options else None
 
     await execute(
-        "INSERT INTO scans (id, target, target_type, status, inline_content, created_at) VALUES (?, ?, ?, 'pending', ?, ?)",
-        [scan_id, scan_req.target, scan_req.target_type.value, inline_content, now],
+        "INSERT INTO scans (id, workspace_id, target, target_type, status, inline_content, request_id, client_ip, user_agent, created_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)",
+        [scan_id, workspace.workspace_id, scan_req.target, scan_req.target_type.value, inline_content, context["request_id"], context["client_ip"], context["user_agent"], now],
     )
-
+    await record_audit_event(
+        "scan_submitted",
+        scan_id=scan_id,
+        workspace_id=workspace.workspace_id,
+        target=scan_req.target,
+        request_id=context["request_id"],
+        client_ip=context["client_ip"],
+        user_agent=context["user_agent"],
+        details={"target_type": scan_req.target_type.value},
+    )
     # For Vercel Hobby plan (60s limit), run scan inline with timeout
     # Client should use inline_content for configs to avoid timeouts
     import asyncio
     try:
         await asyncio.wait_for(run_scan(scan_id, scan_req), timeout=55.0)
-        return {"scan_id": scan_id, "status": "completed"}
+        return {"scan_id": scan_id, "status": "completed", "request_id": context["request_id"]}
     except asyncio.TimeoutError:
-        logger.warning("Scan %s timed out inline, marking as failed", scan_id)
+        logger.warning("Scan %s timed out inline, marking as failed (request_id=%s)", scan_id, context["request_id"])
         try:
             await execute(
                 "UPDATE scans SET status = 'failed', error_message = ? WHERE id = ?",
@@ -89,9 +129,24 @@ async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks:
             )
         except Exception:
             pass
-        return {"scan_id": scan_id, "status": "failed", "error": "Scan timed out. Use inline config instead of URL for large responses."}
+        await record_audit_event(
+            "scan_failed",
+            scan_id=scan_id,
+            workspace_id=workspace.workspace_id,
+            target=scan_req.target,
+            request_id=context["request_id"],
+            client_ip=context["client_ip"],
+            user_agent=context["user_agent"],
+            details={"reason": "timeout"},
+        )
+        return {
+            "scan_id": scan_id,
+            "status": "failed",
+            "error": _public_scan_error(context["request_id"]),
+            "request_id": context["request_id"],
+        }
     except Exception as e:
-        logger.exception("Scan %s failed", scan_id)
+        logger.exception("Scan %s failed (request_id=%s)", scan_id, context["request_id"])
         try:
             await execute(
                 "UPDATE scans SET status = 'failed', error_message = ? WHERE id = ?",
@@ -99,11 +154,27 @@ async def submit_scan(request: Request, scan_req: ScanRequest, background_tasks:
             )
         except Exception:
             pass
-        return {"scan_id": scan_id, "status": "failed", "error": str(e)}
+        await record_audit_event(
+            "scan_failed",
+            scan_id=scan_id,
+            workspace_id=workspace.workspace_id,
+            target=scan_req.target,
+            request_id=context["request_id"],
+            client_ip=context["client_ip"],
+            user_agent=context["user_agent"],
+            details={"reason": type(e).__name__},
+        )
+        return {
+            "scan_id": scan_id,
+            "status": "failed",
+            "error": _public_scan_error(context["request_id"]),
+            "request_id": context["request_id"],
+        }
 
 
 async def _run_scan_task(scan_id: str, request: ScanRequest) -> None:
     import asyncio
+    scan = await fetch_one("SELECT target, request_id, client_ip, user_agent, workspace_id FROM scans WHERE id = ?", [scan_id])
     max_retries = 2
     for attempt in range(max_retries + 1):
         try:
@@ -119,6 +190,17 @@ async def _run_scan_task(scan_id: str, request: ScanRequest) -> None:
                 )
             except Exception:
                 pass
+            if scan:
+                await record_audit_event(
+                    "scan_failed",
+                    scan_id=scan_id,
+                    workspace_id=scan.get("workspace_id"),
+                    target=scan.get("target"),
+                    request_id=scan.get("request_id"),
+                    client_ip=scan.get("client_ip"),
+                    user_agent=scan.get("user_agent"),
+                    details={"reason": "timeout"},
+                )
             return
         except Exception:
             if attempt < max_retries:
@@ -133,6 +215,17 @@ async def _run_scan_task(scan_id: str, request: ScanRequest) -> None:
                     )
                 except Exception:
                     logger.exception("Failed to mark scan %s as failed", scan_id)
+                if scan:
+                    await record_audit_event(
+                        "scan_failed",
+                        scan_id=scan_id,
+                        workspace_id=scan.get("workspace_id"),
+                        target=scan.get("target"),
+                        request_id=scan.get("request_id"),
+                        client_ip=scan.get("client_ip"),
+                        user_agent=scan.get("user_agent"),
+                        details={"reason": "retries_exhausted"},
+                    )
 
 
 # ---------------------------------------------------------------------------
@@ -140,13 +233,29 @@ async def _run_scan_task(scan_id: str, request: ScanRequest) -> None:
 # ---------------------------------------------------------------------------
 
 @router.delete("/scan/{scan_id}")
-async def delete_scan(scan_id: str):
-    row = await fetch_one("SELECT id FROM scans WHERE id = ?", [scan_id])
+async def delete_scan(request: Request, scan_id: str):
+    row = await fetch_one("SELECT id, workspace_id FROM scans WHERE id = ?", [scan_id])
     if not row:
         raise HTTPException(status_code=404, detail="Scan not found")
+    workspace = await resolve_workspace(request)
+    if row.get("workspace_id") != workspace.workspace_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    scan = await fetch_one("SELECT target, request_id, client_ip, user_agent, workspace_id FROM scans WHERE id = ?", [scan_id])
 
     await execute("DELETE FROM findings WHERE scan_id = ?", [scan_id])
     await execute("DELETE FROM scans WHERE id = ?", [scan_id])
+
+    if scan:
+        await record_audit_event(
+            "scan_deleted",
+            scan_id=scan_id,
+            workspace_id=scan.get("workspace_id"),
+            target=scan.get("target"),
+            request_id=scan.get("request_id"),
+            client_ip=scan.get("client_ip"),
+            user_agent=scan.get("user_agent"),
+        )
 
     return {"deleted": True, "scan_id": scan_id}
 
@@ -200,10 +309,13 @@ def _content_changed(scan: dict, previous_scan: dict | None) -> bool:
 
 
 @router.get("/scan/{scan_id}", response_model=ScanResponse)
-async def get_scan(scan_id: str):
+async def get_scan(request: Request, scan_id: str):
+    workspace = await resolve_workspace(request)
     scan = await fetch_one("SELECT * FROM scans WHERE id = ?", [scan_id])
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
+    if scan.get("workspace_id") != workspace.workspace_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     findings_rows = await fetch_all(
         """SELECT * FROM findings WHERE scan_id = ?
@@ -238,6 +350,7 @@ async def get_scan(scan_id: str):
         error_message=scan.get("error_message"),
         content_changed=_content_changed(scan, previous_scan),
         rescan_of=scan.get("rescan_of"),
+        request_id=scan.get("request_id"),
         ai_attack_scenarios=ai_data.get("ai_attack_scenarios", []),
         ai_remediation=ai_data.get("ai_remediation", []),
         ai_narrative=ai_data.get("ai_narrative", {}),
@@ -252,9 +365,13 @@ async def get_scan(scan_id: str):
 @router.post("/scan/{scan_id}/rescan")
 @limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def rescan_scan(request: Request, scan_id: str, background_tasks: BackgroundTasks):
+    context = _request_context(request)
+    workspace = await resolve_workspace(request)
     prev_scan = await fetch_one("SELECT * FROM scans WHERE id = ?", [scan_id])
     if not prev_scan:
         raise HTTPException(status_code=404, detail="Scan not found")
+    if prev_scan.get("workspace_id") != workspace.workspace_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     if prev_scan["status"] not in ("completed", "failed"):
         raise HTTPException(status_code=400, detail="Previous scan is still in progress")
 
@@ -269,13 +386,24 @@ async def rescan_scan(request: Request, scan_id: str, background_tasks: Backgrou
     new_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     await execute(
-        "INSERT INTO scans (id, target, target_type, status, rescan_of, created_at) VALUES (?, ?, ?, 'pending', ?, ?)",
-        [new_id, prev_scan["target"], prev_scan["target_type"], scan_id, now],
+        "INSERT INTO scans (id, workspace_id, target, target_type, status, rescan_of, request_id, client_ip, user_agent, created_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)",
+        [new_id, workspace.workspace_id, prev_scan["target"], prev_scan["target_type"], scan_id, context["request_id"], context["client_ip"], context["user_agent"], now],
+    )
+
+    await record_audit_event(
+        "scan_rescan_requested",
+        scan_id=new_id,
+        workspace_id=workspace.workspace_id,
+        target=prev_scan["target"],
+        request_id=context["request_id"],
+        client_ip=context["client_ip"],
+        user_agent=context["user_agent"],
+        details={"rescan_of": scan_id},
     )
 
     background_tasks.add_task(_run_scan_task, new_id, new_req)
 
-    return {"scan_id": new_id, "status": "pending", "rescan_of": scan_id}
+    return {"scan_id": new_id, "status": "pending", "rescan_of": scan_id, "request_id": context["request_id"]}
 
 
 # ---------------------------------------------------------------------------
@@ -283,10 +411,13 @@ async def rescan_scan(request: Request, scan_id: str, background_tasks: Backgrou
 # ---------------------------------------------------------------------------
 
 @router.get("/scan/{scan_id}/changes")
-async def get_content_changes(scan_id: str):
+async def get_content_changes(request: Request, scan_id: str):
+    workspace = await resolve_workspace(request)
     scan = await fetch_one("SELECT * FROM scans WHERE id = ?", [scan_id])
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
+    if scan.get("workspace_id") != workspace.workspace_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     if not scan.get("rescan_of"):
         raise HTTPException(status_code=400, detail="This scan is not a re-scan")
 
@@ -312,10 +443,13 @@ async def get_content_changes(scan_id: str):
 # ---------------------------------------------------------------------------
 
 @router.get("/report/{scan_id}", response_model=ReportResponse)
-async def get_report(scan_id: str):
+async def get_report(request: Request, scan_id: str):
+    workspace = await resolve_workspace(request)
     scan = await fetch_one("SELECT * FROM scans WHERE id = ?", [scan_id])
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
+    if scan.get("workspace_id") != workspace.workspace_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     findings_rows = await fetch_all(
         """SELECT * FROM findings WHERE scan_id = ?
@@ -354,6 +488,7 @@ async def get_report(scan_id: str):
         metadata=_meta(scan),
         created_at=scan.get("created_at"),
         error_message=scan.get("error_message"),
+        request_id=scan.get("request_id"),
     )
 
 
@@ -362,10 +497,13 @@ async def get_report(scan_id: str):
 # ---------------------------------------------------------------------------
 
 @router.get("/report/{scan_id}/full")
-async def get_full_report(scan_id: str):
+async def get_full_report(request: Request, scan_id: str):
+    workspace = await resolve_workspace(request)
     scan = await fetch_one("SELECT * FROM scans WHERE id = ?", [scan_id])
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
+    if scan.get("workspace_id") != workspace.workspace_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     findings_rows = await fetch_all(
         """SELECT * FROM findings WHERE scan_id = ?
@@ -395,12 +533,16 @@ async def get_full_report(scan_id: str):
 
 @router.get("/report/{scan_id}/export")
 async def export_report(
+    request: Request,
     scan_id: str,
     fmt: str = Query("json", alias="format", pattern="^(json|text|markdown)$"),
 ):
+    workspace = await resolve_workspace(request)
     scan = await fetch_one("SELECT * FROM scans WHERE id = ?", [scan_id])
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
+    if scan.get("workspace_id") != workspace.workspace_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     findings_rows = await fetch_all(
         """SELECT * FROM findings WHERE scan_id = ?
@@ -510,16 +652,18 @@ def _to_markdown(scan, findings, meta, trust, trust_label):
 
 @router.get("/scans", response_model=ScanListResponse)
 async def list_scans(
+    request: Request,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
 ):
+    workspace = await resolve_workspace(request)
     offset = (page - 1) * limit
 
-    total = await fetch_val("SELECT COUNT(*) FROM scans")
+    total = await fetch_val("SELECT COUNT(*) FROM scans WHERE workspace_id = ?", [workspace.workspace_id])
 
     rows = await fetch_all(
-        "SELECT * FROM scans ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        [limit, offset],
+        "SELECT * FROM scans WHERE workspace_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        [workspace.workspace_id, limit, offset],
     )
 
     return ScanListResponse(
@@ -528,6 +672,7 @@ async def list_scans(
                 scan_id=s["id"], target=s["target"], target_type=s["target_type"],
                 status=s["status"], overall_risk=s["overall_risk"], risk_level=s["risk_level"],
                 created_at=s.get("created_at"),
+                request_id=s.get("request_id"),
             )
             for s in rows
         ],
@@ -536,13 +681,14 @@ async def list_scans(
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def stats():
-    total = await fetch_val("SELECT COUNT(*) FROM scans")
+async def stats(request: Request):
+    workspace = await resolve_workspace(request)
+    total = await fetch_val("SELECT COUNT(*) FROM scans WHERE workspace_id = ?", [workspace.workspace_id])
 
-    risk_rows = await fetch_all("SELECT risk_level, COUNT(*) as cnt FROM scans GROUP BY risk_level")
+    risk_rows = await fetch_all("SELECT risk_level, COUNT(*) as cnt FROM scans WHERE workspace_id = ? GROUP BY risk_level", [workspace.workspace_id])
     risk_dist = {row["risk_level"]: row["cnt"] for row in risk_rows}
 
-    recent = await fetch_all("SELECT * FROM scans ORDER BY created_at DESC LIMIT 5")
+    recent = await fetch_all("SELECT * FROM scans WHERE workspace_id = ? ORDER BY created_at DESC LIMIT 5", [workspace.workspace_id])
 
     return StatsResponse(
         total_scans=total or 0,
@@ -552,7 +698,56 @@ async def stats():
                 scan_id=s["id"], target=s["target"], target_type=s["target_type"],
                 status=s["status"], overall_risk=s["overall_risk"], risk_level=s["risk_level"],
                 created_at=s.get("created_at"),
+                request_id=s.get("request_id"),
             )
             for s in recent
         ],
     )
+
+
+@router.get("/audit/events", response_model=AuditEventListResponse)
+async def audit_events(
+    request: Request,
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+):
+    workspace = await resolve_workspace(request)
+    offset = (page - 1) * limit
+    total = await fetch_val("SELECT COUNT(*) FROM audit_events WHERE workspace_id = ?", [workspace.workspace_id])
+    rows = await fetch_all(
+        "SELECT * FROM audit_events WHERE workspace_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        [workspace.workspace_id, limit, offset],
+    )
+
+    return AuditEventListResponse(
+        events=[
+            AuditEvent(
+                id=row["id"],
+                event_type=row["event_type"],
+                scan_id=row.get("scan_id"),
+                target=row.get("target"),
+                request_id=row.get("request_id"),
+                created_at=row.get("created_at"),
+                details=_decode_details(row.get("details_json")),
+            )
+            for row in rows
+        ],
+        total=total or 0,
+        page=page,
+        limit=limit,
+    )
+
+
+@router.post("/admin/workspaces")
+async def create_workspace_endpoint(request: Request, payload: dict[str, str]):
+    await require_admin(request)
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Workspace name is required")
+    workspace_id, api_key, key_prefix = await create_workspace(name)
+    return {
+        "workspace_id": workspace_id,
+        "workspace_name": name,
+        "api_key": api_key,
+        "api_key_prefix": key_prefix,
+    }

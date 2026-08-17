@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-MCPeek demonstrates **strong coverage** across AI security frameworks (OWASP LLM Top 10, Agentic AI, MITRE ATLAS) with **100% precision/recall/F1** on labeled test cases and **20/20 adversarial attack scenarios blocked**. Across all 45 SecuritySkills, MCPeek has **strong alignment** with 2 skills (Dependency Scanning, Secrets Management), **partial alignment** with 23 skills, and **minimal alignment** with 20 skills. MCPeek's unique value — scanning MCP configs for AI-agent-specific threats — is not covered by any traditional security skill.
+MCPeek shows **strong coverage** across AI security frameworks (OWASP LLM Top 10, Agentic AI, MITRE ATLAS) with **100% precision/recall/F1** on labeled test cases and **20/20 adversarial attack scenarios blocked**. Across all 45 SecuritySkills, MCPeek has **strong alignment** with 2 skills (Dependency Scanning, Secrets Management), **partial alignment** with 23 skills, and **minimal alignment** with 20 skills. MCPeek's unique value — scanning MCP configs for AI-agent-specific threats — is not covered by any traditional security skill.
 
 ---
 

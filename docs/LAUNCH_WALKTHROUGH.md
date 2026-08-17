@@ -1,4 +1,4 @@
-# HACKHAZARDS '26 — MCPeek
+# MCPeek Launch Walkthrough
 
 ## Tracks
 
@@ -9,10 +9,10 @@
 
 | Resource | URL |
 |----------|-----|
-| Live Demo | https://frontend-lake-eight-70.vercel.app |
+| Product Tour | https://frontend-lake-eight-70.vercel.app |
 | API | https://mcpeek-backend.vercel.app/docs |
 | GitHub | https://github.com/Chmgx81/mcpeek |
-| Demo Video | https://youtu.be/mQXrpGpstA8 |
+| Launch Video | https://youtu.be/mQXrpGpstA8 |
 | Blog Post | https://rootmazex.hashnode.com/mcpeek-catching-security-threats-in-mcp-servers-before-they-execute |
 
 ## Team Code
@@ -32,14 +32,14 @@ MCPeek scans MCP server configurations and AI agent skills for security risks be
 - **Bait-and-switch** — content hash comparison across rescans
 - **SKILLCLOAK** — self-extracting skills with entropy analysis
 
-## Demo Script (90 seconds)
+## Walkthrough Script (90 seconds)
 
 ### 1. Open the landing page
 State the problem: "AI agents run tools through MCP servers configured via JSON files. These configs can hide shell commands, inject instructions that hijack AI behavior, and expose secrets. Traditional scanners miss these threats because they only look at source code."
 
 ### 2. Scan a safe config
 Go to Dashboard → Paste Config → paste `examples/safe-mcp.json`
-Result: **Safe** (score 100) — demonstrates zero false positives.
+Result: **Safe** (score 100) — validates zero false positives.
 
 ### 3. Scan a vulnerable config
 Paste `examples/vulnerable-mcp-curl-shell.json`
@@ -59,7 +59,7 @@ Exits with code 2 — this is how the GitHub Action blocks pull requests.
 ### 6. Show AI analysis (optional)
 Point out the AI-generated attack scenarios and remediation suggestions on the scan results page.
 
-## Judge-Friendly Pitch
+## Executive Pitch
 
 MCPeek is a runtime-aware security scanner for MCP servers and AI agent skills. It catches risks that traditional source code scanners miss: hidden prompt injection, dangerous tool permissions, curl-to-shell installs, hardcoded secrets, external resource loading, and AI-specific supply chain issues. It works as a web app, a CLI tool, and a GitHub Action for CI/CD pipelines.
 

@@ -89,6 +89,7 @@ class ScanResponse(BaseModel):
     error_message: str | None = None
     content_changed: bool = False
     rescan_of: str | None = None
+    request_id: str | None = None
     ai_attack_scenarios: list[dict] = Field(default_factory=list)
     ai_remediation: list[dict] = Field(default_factory=list)
     ai_narrative: dict = Field(default_factory=dict)
@@ -109,6 +110,7 @@ class ReportResponse(BaseModel):
     metadata: dict[str, int | dict]
     created_at: str | None = None
     error_message: str | None = None
+    request_id: str | None = None
 
 
 class ScanListItem(BaseModel):
@@ -119,6 +121,7 @@ class ScanListItem(BaseModel):
     overall_risk: int
     risk_level: str
     created_at: str | None = None
+    request_id: str | None = None
 
 
 class ScanListResponse(BaseModel):
@@ -132,6 +135,23 @@ class StatsResponse(BaseModel):
     total_scans: int
     risk_distribution: dict[str, int]
     recent_scans: list[ScanListItem]
+
+
+class AuditEvent(BaseModel):
+    id: str
+    event_type: str
+    scan_id: str | None = None
+    target: str | None = None
+    request_id: str | None = None
+    created_at: str | None = None
+    details: dict[str, object] = Field(default_factory=dict)
+
+
+class AuditEventListResponse(BaseModel):
+    events: list[AuditEvent]
+    total: int
+    page: int
+    limit: int
 
 
 # --- Report schemas ---

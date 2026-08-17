@@ -83,7 +83,7 @@ export default function Sidebar() {
 
         <nav className="flex flex-col gap-0.5 flex-1">{links}</nav>
 
-        {/* Local demo status */}
+        {/* Local environment status */}
         <div
           className="flex items-center gap-2.5 px-3 py-2.5 mt-auto rounded"
           style={{ borderTop: "1px solid #1a1a1a" }}
@@ -92,7 +92,7 @@ export default function Sidebar() {
             <Terminal className="h-3.5 w-3.5" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-medium truncate" style={{ color: "#e5e5e5" }}>Local demo</div>
+            <div className="text-[12px] font-medium truncate" style={{ color: "#e5e5e5" }}>Local environment</div>
             <div className="text-[10px] truncate" style={{ color: "#525252" }}>No account required</div>
           </div>
         </div>

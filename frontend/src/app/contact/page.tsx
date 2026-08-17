@@ -29,10 +29,10 @@ export default function ContactPage() {
             <Logo size={48} />
           </div>
           <h1 className="text-2xl font-bold mb-2" style={{ color: "#fafafa", letterSpacing: "-0.03em" }}>
-            Get in touch
+            Contact MCPeek
           </h1>
           <p className="text-[13px]" style={{ color: "#737373" }}>
-            Demo feedback, contribution ideas, or deployment questions.
+            Product feedback, deployment questions, or enterprise rollout planning.
           </p>
         </div>
 
@@ -45,7 +45,7 @@ export default function ContactPage() {
               <Check className="h-5 w-5" style={{ color: "#22c55e" }} />
             </div>
             <p className="text-[14px] font-medium" style={{ color: "#e5e5e5" }}>Message sent</p>
-            <p className="text-[12px] mt-1" style={{ color: "#525252" }}>This demo stores no messages yet. Use this to preview the contact flow.</p>
+            <p className="text-[12px] mt-1" style={{ color: "#525252" }}>This preview does not persist messages yet. Use it to validate the contact flow.</p>
           </div>
         ) : (
           <form

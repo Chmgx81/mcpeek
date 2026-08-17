@@ -1,6 +1,6 @@
 "use client";
 
-export default function DemoEvidence() {
+export default function ValidationEvidence() {
   const samples = [
     {
       name: "Safe MCP control",
@@ -29,12 +29,12 @@ export default function DemoEvidence() {
     <section className="px-5 py-20">
       <div className="mx-auto max-w-[1100px]">
         <div className="mb-12 text-center">
-          <p className="text-[11px] font-medium uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Demo Evidence</p>
+          <p className="text-[11px] font-medium uppercase tracking-widest mb-3" style={{ color: "#22c55e", letterSpacing: "0.1em" }}>Validation Evidence</p>
           <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#fafafa", letterSpacing: "-0.03em" }}>
             Verified against included fixtures
           </h2>
           <p className="text-[13px] mt-2 max-w-xl mx-auto" style={{ color: "#737373", lineHeight: 1.6 }}>
-            MCPeek ships with safe and intentionally vulnerable samples so judges can reproduce the results locally.
+            MCPeek ships with safe and intentionally vulnerable samples so teams can reproduce the results locally.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

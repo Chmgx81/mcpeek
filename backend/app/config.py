@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 10
     ALLOW_LOCAL_PATH_SCANS: bool = False
     ALLOW_PRIVATE_NETWORK_SCANS: bool = False
+    ADMIN_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
     NVIDIA_NIM_API_KEY: str = ""
     NVIDIA_NIM_BASE_URL: str = "https://integrate.api.nvidia.com/v1"

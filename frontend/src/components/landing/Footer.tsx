@@ -6,8 +6,9 @@ import { Github, ExternalLink } from "lucide-react";
 const links = {
   product: [
     { label: "Dashboard", href: "/dashboard" },
+    { label: "Pricing", href: "#pricing" },
     { label: "Blog", href: "/blog/introducing-mcpeek" },
-    { label: "Live Demo", href: "https://frontend-lake-eight-70.vercel.app", external: true },
+    { label: "Product Tour", href: "https://frontend-lake-eight-70.vercel.app", external: true },
   ],
   developers: [
     { label: "GitHub", href: "https://github.com/Chmgx81/mcpeek", external: true },
@@ -15,8 +16,7 @@ const links = {
             { label: "API Docs", href: "https://mcpeek-backend.vercel.app/docs", external: true },
   ],
   community: [
-    { label: "Hackathon Demo", href: "https://youtu.be/mQXrpGpstA8", external: true },
-    { label: "HACKHAZARDS '26", href: "https://hackhazards.devpost.com", external: true },
+    { label: "Launch Video", href: "https://youtu.be/mQXrpGpstA8", external: true },
     { label: "Report Issue", href: "https://github.com/Chmgx81/mcpeek/issues", external: true },
   ],
 };
@@ -48,7 +48,7 @@ export default function Footer() {
             <span className="text-4xl font-bold tracking-tight" style={{ color: "#fafafa", letterSpacing: "-0.04em" }}>MCPeek</span>
           </div>
           <p className="text-[13px] max-w-md mx-auto" style={{ color: "#525252", lineHeight: 1.6 }}>
-            Runtime-aware security scanning for MCP servers, AI agent skills, and toolchains. No account required.
+            Runtime-aware security scanning for MCP servers, AI agent skills, and toolchains. Free for public use, with enterprise workspaces available.
           </p>
         </div>
 

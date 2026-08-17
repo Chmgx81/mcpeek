@@ -24,7 +24,7 @@ export default function CTABanner() {
         />
         <div className="relative z-10">
           <h2 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: "#fafafa", letterSpacing: "-0.03em" }}>
-            Don&apos;t ship blind.
+            Don&apos;t ship unreviewed.
           </h2>
           <p className="text-[14px] mb-6" style={{ color: "#737373" }}>
             Your MCP server might be running untrusted code right now.<br />

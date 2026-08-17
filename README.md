@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://frontend-lake-eight-70.vercel.app">Live Demo</a> ·
+  <a href="https://frontend-lake-eight-70.vercel.app">Product Tour</a> ·
   <a href="https://mcpeek-backend.vercel.app/docs">API</a> ·
   <a href="https://github.com/Chmgx81/mcpeek">GitHub</a> ·
   <a href="https://youtu.be/mQXrpGpstA8">Video</a> ·
@@ -39,11 +39,11 @@ MCPeek detects **15+ threat categories** including all OWASP MCP Top 10 vulnerab
 
 ---
 
-## Demo
+## Product Walkthrough
 
 <p align="center">
   <a href="https://youtu.be/mQXrpGpstA8?autoplay=1">
-    <img src="https://img.youtube.com/vi/mQXrpGpstA8/0.jpg" alt="MCPeek Demo" width="600">
+    <img src="https://img.youtube.com/vi/mQXrpGpstA8/0.jpg" alt="MCPeek launch walkthrough" width="600">
   </a>
 </p>
 
@@ -78,6 +78,10 @@ npm run dev
 ```
 
 Open **http://localhost:3000**
+
+## Pricing
+
+MCPeek is free for public use and self-hosted scanning. Enterprises that need workspace ownership, API keys, audit visibility, and support should contact us for rollout details.
 
 ### CLI Scanner
 
@@ -156,6 +160,7 @@ Optional deep analysis using free NVIDIA NIM models (no credit card required):
 | `GET` | `/api/v1/report/{id}/export?format=json` | Export as JSON |
 | `GET` | `/api/v1/scans` | List scans (paginated) |
 | `GET` | `/api/v1/stats` | Dashboard statistics |
+| `GET` | `/api/v1/audit/events` | Audit trail for scan lifecycle events |
 
 Full interactive docs at **[/docs](https://mcpeek-backend.vercel.app/docs)**.
 
@@ -301,10 +306,15 @@ AI calls are rate-limited (5/minute) and have a 15-second timeout. If AI is unav
 - Input validation and size limits (500KB inline, 2MB remote)
 - No code execution — static analysis only
 - SHA-256 content hashing for tamper detection
+- Audit trail with request IDs, client IPs, and user-agent capture for scan lifecycle events
 - AI prompt sanitization (control character stripping, truncation)
 - Agent defense: Unicode homoglyph normalization, Base64 decoding, social engineering detection
 - Tool abuse prevention: rate limiting, permission checks, injection detection in parameters
 - Session tracking: 3-strike rule for repeated suspicious activity
+
+## Enterprise Readiness
+
+MCPeek supports a public scan path for individuals and an enterprise workspace model for teams. Workspace-scoped API keys, audit events, and request tracing are the current ownership seam; billing is intentionally not wired yet.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
